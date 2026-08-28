@@ -35,6 +35,6 @@ Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Secret scanning in CI (gitleaks) | - | M0 |
+| Secret scanning in CI (gitleaks) | x | M0, full history |
 | Dependency scanning (Dependabot / Trivy) | - | M6 |
 | SBOM generated in CI | - | M6 |

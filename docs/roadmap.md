@@ -14,7 +14,7 @@ secret scan and is green.
 - [x] Spring Boot project in `backend/` (web + actuator)
 - [x] `GET /health` endpoint
 - [x] GitHub Actions: build backend, run gitleaks
-- [ ] First push to GitHub
+- [x] First push to GitHub
 
 ## M1 — TOTP core (iOS)
 
