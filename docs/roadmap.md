@@ -13,7 +13,7 @@ secret scan and is green.
 - [x] `.gitignore` for Java, Xcode, macOS, IntelliJ
 - [x] Spring Boot project in `backend/` (web + actuator)
 - [x] `GET /health` endpoint
-- [ ] GitHub Actions: build backend, run gitleaks
+- [x] GitHub Actions: build backend, run gitleaks
 - [ ] First push to GitHub
 
 ## M1 — TOTP core (iOS)
