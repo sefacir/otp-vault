@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Java / Maven / Gradle
+target/
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.xcworkspace/xcshareddata/swiftpm/Package.resolved
+
+# Env / secrets
+.env
+*.local
+secrets.properties
