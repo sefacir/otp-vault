@@ -21,9 +21,9 @@ secret scan and is green.
 Done when: a manually entered secret produces the correct 6-digit code, shown in a list
 with a countdown ring.
 
-- [ ] Xcode project in `ios/`
-- [ ] RFC 6238 TOTP implementation (HMAC-SHA1, 30s, 6 digits)
-- [ ] Unit tests against RFC 6238 test vectors
+- [x] Xcode project in `ios/` (OtpVault app target linked to OtpVaultCore)
+- [x] RFC 6238 TOTP implementation (HMAC-SHA1/256/512, configurable period + digits)
+- [x] Unit tests against RFC 6238 test vectors
 - [ ] Manual "add account" form (issuer, label, secret)
 - [ ] Account list with live code + countdown ring
 

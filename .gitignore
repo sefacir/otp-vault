@@ -18,6 +18,10 @@ xcuserdata/
 DerivedData/
 *.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
+# Swift Package Manager
+.build/
+.swiftpm/
+
 # Env / secrets
 .env
 *.local
