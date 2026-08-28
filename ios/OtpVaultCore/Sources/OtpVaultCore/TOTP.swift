@@ -27,6 +27,28 @@ public struct TOTP {
     }
 
     public func code(at date: Date = Date()) -> String {
-        return ""
+        let counter = UInt64(date.timeIntervalSince1970 / period)
+        var bigEndianCounter = counter.bigEndian
+        let message = withUnsafeBytes(of: &bigEndianCounter) { Data($0) }
+
+        let key = SymmetricKey(data: secret)
+        let hash: [UInt8]
+        switch algorithm {
+        case .sha1:
+            hash = Array(HMAC<Insecure.SHA1>.authenticationCode(for: message, using: key))
+        case .sha256:
+            hash = Array(HMAC<SHA256>.authenticationCode(for: message, using: key))
+        case .sha512:
+            hash = Array(HMAC<SHA512>.authenticationCode(for: message, using: key))
+        }
+
+        let offset = Int(hash[hash.count - 1] & 0x0f)
+        let binary = (UInt32(hash[offset] & 0x7f) << 24)
+            | (UInt32(hash[offset + 1]) << 16)
+            | (UInt32(hash[offset + 2]) << 8)
+            | UInt32(hash[offset + 3])
+
+        let modulo = UInt32(pow(10, Double(digits)))
+        return String(format: "%0\(digits)u", binary % modulo)
     }
 }
