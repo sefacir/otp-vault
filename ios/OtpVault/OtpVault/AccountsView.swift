@@ -2,7 +2,8 @@ import SwiftUI
 import OtpVaultCore
 
 struct AccountsView: View {
-    private let accounts = Account.samples
+    @State private var accounts = Account.samples
+    @State private var showingAdd = false
 
     var body: some View {
         NavigationStack {
@@ -12,6 +13,18 @@ struct AccountsView: View {
                 }
             }
             .navigationTitle("Accounts")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showingAdd = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingAdd) {
+                AddAccountView { accounts.append($0) }
+            }
         }
     }
 }
