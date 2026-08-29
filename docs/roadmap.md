@@ -54,10 +54,10 @@ place, data is in PostgreSQL.
 Done when: the vault is encrypted on-device and the ciphertext blob round-trips to the
 backend.
 
-- [ ] Derive vault key from master password (Argon2id), never sent to server
-- [ ] Encrypt vault with AES-256-GCM
+- [x] Derive vault key from master password (PBKDF2-HMAC-SHA256, 600k iters), never sent to server
+- [x] Encrypt vault with AES-256-GCM (VaultCrypto + BackupEnvelope, 8 tests)
 - [ ] `PUT /vault` / `GET /vault`: one ciphertext blob per user, with version
-- [ ] iOS backup flow
+- [ ] iOS backup flow (needs iOS-side backend auth: register/login + token storage)
 
 ## M5 — Restore flow
 

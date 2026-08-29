@@ -22,6 +22,19 @@ Short log of choices and why, newest first.
   proxy IP (one shared bucket) unless `server.forward-headers-strategy` is set and the
   proxy is trusted to overwrite `X-Forwarded-For`. Not configured yet — dev runs direct.
 
+## 2026-08-29 — Vault crypto (M4a)
+
+- Client-side KDF is PBKDF2-HMAC-SHA256, 600k iterations, via CommonCrypto — chosen over
+  Argon2id to keep `OtpVaultCore` dependency-free (no external SPM package to vet). The
+  `BackupEnvelope` records `kdf.algorithm`, so moving to Argon2id later is a version bump.
+- Vault is AES-256-GCM. `AES.GCM.SealedBox.combined` (nonce ‖ ciphertext ‖ tag) is stored
+  base64 in the envelope; a fresh salt and nonce are generated on every `seal`.
+- The derived key never leaves the device. The server stores the whole envelope
+  (salt + KDF params + ciphertext). A malicious server could serve weak KDF params;
+  signing the envelope is deferred to M6.
+- Wrong master password surfaces as `CryptoError.decryptionFailed` (GCM tag mismatch),
+  never a partial/garbage decrypt.
+
 ## 2026-08-29 — Backend auth hardening (post-review)
 
 - Login timing: on unknown email we still run one `passwordEncoder.matches` against a
