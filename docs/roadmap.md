@@ -74,11 +74,13 @@ all accounts come back.
 Done when: pinning is on, MASVS/ASVS review is done, dependency + secret scans are green,
 docs are current.
 
-- [ ] Certificate pinning on iOS
+- [x] Dependency scanning (Trivy HIGH/CRITICAL) + Dependabot + CycloneDX SBOM in CI
+- [ ] Certificate pinning on iOS + configurable base URL
+- [ ] Backend: Flyway, HTTPS/HSTS, /vault rate limit, JWT iss/aud, audit logging
+- [ ] iOS: envelope signing, stronger master-password rule
+- [ ] iOS app unit-test target (Session, AccountStore) + JwtServiceTest
 - [ ] MASVS review pass, findings logged
 - [ ] ASVS review pass, findings logged
-- [ ] Dependency scanning (Dependabot / Trivy) green
-- [ ] SBOM generated in CI
 
 ## Later
 

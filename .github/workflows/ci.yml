@@ -42,6 +42,12 @@ jobs:
           OTPVAULT_DB_USER: otpvault
           OTPVAULT_DB_PASSWORD: otpvault
         run: ./mvnw -B verify
+      - name: Upload backend SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-backend
+          path: backend/target/classes/META-INF/sbom/application.cdx.json
+          if-no-files-found: error
 
   secret-scan:
     runs-on: ubuntu-latest
@@ -58,3 +64,25 @@ jobs:
           sudo mv gitleaks /usr/local/bin/
       - name: Scan full history
         run: gitleaks git --redact -v .
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Trivy
+        env:
+          TRIVY_VERSION: 0.58.1
+        run: |
+          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+            | tar -xz trivy
+          sudo mv trivy /usr/local/bin/
+      - name: Vulnerability scan
+        run: trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress .
+      - name: Generate repository SBOM
+        run: trivy fs --format cyclonedx --output sbom-repo.cdx.json --no-progress .
+      - name: Upload repository SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-repo
+          path: sbom-repo.cdx.json
+          if-no-files-found: error

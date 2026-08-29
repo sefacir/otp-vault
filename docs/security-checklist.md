@@ -45,5 +45,6 @@ Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
 | Item | Status | Notes |
 |------|--------|-------|
 | Secret scanning in CI (gitleaks) | x | M0, full history |
-| Dependency scanning (Dependabot / Trivy) | - | M6 |
-| SBOM generated in CI | - | M6 |
+| Dependency scanning (Trivy, fail on HIGH/CRITICAL) | x | M6; caught + fixed CVE-2025-14813 (bcprov 1.78.1 -> 1.85.2) |
+| Automated dependency updates (Dependabot) | x | M6; maven + swift + github-actions, weekly |
+| SBOM generated in CI (CycloneDX) | x | M6; backend `cyclonedx-maven-plugin` + repo-wide Trivy SBOM, uploaded as artifacts |
