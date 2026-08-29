@@ -25,7 +25,7 @@ anything you cannot afford to lose yet.
 |---------|-------|
 | iOS     | Swift, SwiftUI, Keychain / Secure Enclave, LocalAuthentication |
 | Backend | Java, Spring Boot, PostgreSQL |
-| Crypto  | Argon2id key derivation, AES-256-GCM vault encryption, zero-knowledge server |
+| Crypto  | PBKDF2 vault-key derivation, AES-256-GCM vault encryption, Argon2id password hashing, zero-knowledge server |
 
 ## Layout
 
