@@ -37,6 +37,11 @@ final class BackupController {
     }
 
     @MainActor
+    func signOut(accessToken: String) async {
+        try? await client.logout(accessToken: accessToken)
+    }
+
+    @MainActor
     func backUp(
         accounts: [Account],
         masterPassword: String,

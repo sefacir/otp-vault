@@ -1,6 +1,8 @@
 package dev.otpvault.backend.security;
 
 import dev.otpvault.backend.auth.JwtService;
+import dev.otpvault.backend.auth.JwtService.AccessTokenClaims;
+import dev.otpvault.backend.auth.TokenDenylist;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,9 +20,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final TokenDenylist denylist;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, TokenDenylist denylist) {
         this.jwtService = jwtService;
+        this.denylist = denylist;
     }
 
     @Override
@@ -32,10 +36,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             try {
-                String userId = jwtService.parseUserId(header.substring(7)).toString();
-                var authentication = new UsernamePasswordAuthenticationToken(userId, null, List.of());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                AccessTokenClaims claims = jwtService.parse(header.substring(7));
+                if (denylist.isRevoked(claims.jti())) {
+                    SecurityContextHolder.clearContext();
+                } else {
+                    var authentication = new UsernamePasswordAuthenticationToken(
+                            claims.userId().toString(), claims, List.of());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             } catch (JwtException | IllegalArgumentException invalidToken) {
                 SecurityContextHolder.clearContext();
             }

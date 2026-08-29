@@ -21,8 +21,8 @@ public struct TOTP {
         algorithm: Algorithm = .sha1
     ) {
         self.secret = secret
-        self.digits = digits
-        self.period = period
+        self.digits = min(max(digits, 1), 9)
+        self.period = period > 0 ? period : 30
         self.algorithm = algorithm
     }
 

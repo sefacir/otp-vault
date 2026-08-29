@@ -34,11 +34,15 @@ class AuthFlowTest {
     @Autowired
     private RateLimiter rateLimiter;
 
+    @Autowired
+    private TokenDenylist denylist;
+
     @BeforeEach
     void reset() {
         refreshTokens.deleteAll();
         users.deleteAll();
         rateLimiter.reset();
+        denylist.reset();
     }
 
     private RequestBuilder registerRequest(String email, String password) {
@@ -158,6 +162,46 @@ class AuthFlowTest {
         assertEquals(2, removed);
         assertEquals(1, refreshTokens.count());
         assertEquals(live.getUserId(), refreshTokens.findAll().get(0).getUserId());
+    }
+
+    @Test
+    void logoutRevokesAccessAndRefreshTokens() throws Exception {
+        status(registerRequest("out@example.com", "password123"));
+        String body = mvc.perform(loginRequest("out@example.com", "password123"))
+                .andReturn().getResponse().getContentAsString();
+        String access = matchField(body, "accessToken");
+        String refresh = matchField(body, "refreshToken");
+
+        assertEquals(200, mvc.perform(get("/auth/me").header("Authorization", "Bearer " + access))
+                .andReturn().getResponse().getStatus());
+
+        assertEquals(204, mvc.perform(post("/auth/logout").header("Authorization", "Bearer " + access))
+                .andReturn().getResponse().getStatus());
+
+        assertEquals(401, mvc.perform(get("/auth/me").header("Authorization", "Bearer " + access))
+                .andReturn().getResponse().getStatus());
+        assertEquals(401, status(refreshRequest(refresh)));
+    }
+
+    @Test
+    void logoutRequiresAuthentication() throws Exception {
+        assertEquals(401, mvc.perform(post("/auth/logout")).andReturn().getResponse().getStatus());
+    }
+
+    @Test
+    void rejectsMalformedJsonBody() throws Exception {
+        assertEquals(400, mvc.perform(post("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{not json"))
+                .andReturn().getResponse().getStatus());
+    }
+
+    private String matchField(String body, String name) {
+        Matcher matcher = Pattern.compile("\"" + name + "\"\\s*:\\s*\"([^\"]*)\"").matcher(body);
+        if (!matcher.find()) {
+            throw new AssertionError("no \"" + name + "\" field in response: " + body);
+        }
+        return matcher.group(1);
     }
 
     @Test

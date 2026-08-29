@@ -73,4 +73,24 @@ final class OtpAuthURITests: XCTestCase {
     func testRejectsInvalidSecret() {
         XCTAssertNil(OtpAuthURI.parse("otpauth://totp/x?secret=0189"))
     }
+
+    func testRejectsDigitsBelowRange() {
+        XCTAssertNil(OtpAuthURI.parse("otpauth://totp/x?secret=\(secretB32)&digits=4"))
+    }
+
+    func testRejectsDigitsAboveRange() {
+        XCTAssertNil(OtpAuthURI.parse("otpauth://totp/x?secret=\(secretB32)&digits=10"))
+    }
+
+    func testRejectsNonNumericDigits() {
+        XCTAssertNil(OtpAuthURI.parse("otpauth://totp/x?secret=\(secretB32)&digits=abc"))
+    }
+
+    func testRejectsZeroPeriod() {
+        XCTAssertNil(OtpAuthURI.parse("otpauth://totp/x?secret=\(secretB32)&period=0"))
+    }
+
+    func testRejectsNegativePeriod() {
+        XCTAssertNil(OtpAuthURI.parse("otpauth://totp/x?secret=\(secretB32)&period=-30"))
+    }
 }

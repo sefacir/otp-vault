@@ -112,6 +112,19 @@ final class BackendClientTests: XCTestCase {
         await assertThrows(.rateLimited) { try await self.client.register(email: "a@b.c", password: "password123") }
     }
 
+    func testLogoutPostsBearerToLogoutEndpoint() async throws {
+        respond(204)
+        try await client.logout(accessToken: "logmeout")
+        XCTAssertEqual(MockURLProtocol.lastRequest?.httpMethod, "POST")
+        XCTAssertEqual(MockURLProtocol.lastRequest?.url?.path, "/auth/logout")
+        XCTAssertEqual(MockURLProtocol.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer logmeout")
+    }
+
+    func testLogoutUnauthorized() async {
+        respond(401)
+        await assertThrows(.unauthorized) { try await self.client.logout(accessToken: "stale") }
+    }
+
     func testGetVaultNotFoundReturnsNil() async throws {
         respond(404)
         let state = try await client.getVault(accessToken: "t")

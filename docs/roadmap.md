@@ -80,6 +80,22 @@ docs are current.
 - [x] Storage logic (TokenStore, CodableStore) extracted to OtpVaultCore + tested; JwtServiceTest added
 - [x] MASVS + ASVS review pass, `docs/security-checklist.md` filled in (M6)
 
+## Post-M6 — Final audit fixes
+
+Done when: a line-by-line read of every source file has no open bug or security finding
+and every fix ships with a test.
+
+- [x] iOS: `OtpAuthURI` / `TOTP` reject and clamp out-of-range `digits` / `period` (no trap)
+- [x] Backend: register check-then-insert race maps to 409, not 401
+- [x] Backend: locale-independent email + rate-limit keys (`Locale.ROOT`)
+- [x] Backend: `forward-headers-strategy` default `none` (no XFF rate-limit bypass)
+- [x] Backend: `account_locked` drops the `until` oracle
+- [x] Backend: `OTPVAULT_JWT_SECRET` required, no fallback, refused if weak
+- [x] Backend: `POST /auth/logout` + `TokenDenylist` — access tokens revocable before expiry
+- [x] Backend: 400 for malformed JSON, 409 for data-integrity, never a bare 500
+- [x] iOS: `AppLock` opaque cover for the app-switcher snapshot
+- [x] Tests: iOS core 80, backend 36; CI green
+
 ## Later
 
 HOTP and Steam codes, web client with in-browser decryption, multi-device sync,

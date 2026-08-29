@@ -10,24 +10,25 @@ import java.util.Date;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
 
-    static final String INSECURE_DEV_SECRET = "dev-only-insecure-secret-change-me-min-32-bytes";
     private static final String ISSUER = "otp-vault";
+    private static final int MIN_SECRET_BYTES = 32;
 
     private final SecretKey key;
     private final Duration accessTtl;
 
     public JwtService(
             @Value("${otpvault.jwt.secret}") String secret,
-            @Value("${otpvault.jwt.access-ttl-seconds:900}") long accessTtlSeconds,
-            Environment environment) {
-        if (INSECURE_DEV_SECRET.equals(secret) && environment.matchesProfiles("prod")) {
-            throw new IllegalStateException("OTPVAULT_JWT_SECRET must be set outside development");
+            @Value("${otpvault.jwt.access-ttl-seconds:900}") long accessTtlSeconds) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("OTPVAULT_JWT_SECRET must be set");
+        }
+        if (secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("OTPVAULT_JWT_SECRET must be at least 32 bytes");
         }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTtl = Duration.ofSeconds(accessTtlSeconds);
@@ -50,12 +51,21 @@ public class JwtService {
     }
 
     public UUID parseUserId(String token) {
+        return parse(token).userId();
+    }
+
+    public AccessTokenClaims parse(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key)
                 .requireIssuer(ISSUER)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        return UUID.fromString(claims.getSubject());
+        return new AccessTokenClaims(
+                UUID.fromString(claims.getSubject()),
+                claims.getId(),
+                claims.getExpiration().toInstant());
     }
+
+    public record AccessTokenClaims(UUID userId, String jti, Instant expiresAt) {}
 }

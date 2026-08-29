@@ -49,4 +49,19 @@ final class TOTPTests: XCTestCase {
         let value = code(sha1Secret, .sha1, at: 1111111109)
         XCTAssertEqual(value.count, 8)
     }
+
+    func testClampsOutOfRangeConfiguration() {
+        let zeroPeriod = TOTP(secret: sha1Secret, digits: 20, period: 0)
+        XCTAssertEqual(zeroPeriod.digits, 9)
+        XCTAssertEqual(zeroPeriod.period, 30)
+
+        let negative = TOTP(secret: sha1Secret, digits: -3, period: -10)
+        XCTAssertEqual(negative.digits, 1)
+        XCTAssertEqual(negative.period, 30)
+    }
+
+    func testDoesNotCrashOnExtremeConfiguration() {
+        let totp = TOTP(secret: sha1Secret, digits: 999, period: 0)
+        XCTAssertFalse(totp.code(at: Date(timeIntervalSince1970: 59)).isEmpty)
+    }
 }

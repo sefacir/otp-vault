@@ -70,8 +70,21 @@ public extension OtpAuthURI {
         default: algorithm = .sha1
         }
 
-        let digits = params["digits"].flatMap(Int.init) ?? 6
-        let period = params["period"].flatMap(TimeInterval.init) ?? 30
+        let digits: Int
+        if let raw = params["digits"] {
+            guard let parsed = Int(raw), (6...8).contains(parsed) else { return nil }
+            digits = parsed
+        } else {
+            digits = 6
+        }
+
+        let period: TimeInterval
+        if let raw = params["period"] {
+            guard let parsed = TimeInterval(raw), parsed > 0, parsed <= 300 else { return nil }
+            period = parsed
+        } else {
+            period = 30
+        }
 
         return OtpAuthURI(
             issuer: issuer,

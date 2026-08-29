@@ -21,6 +21,8 @@ private final class FakeBackend: BackendAPI, @unchecked Sendable {
         return AuthTokens(accessToken: "a2", refreshToken: "r2", expiresInSeconds: 900)
     }
 
+    func logout(accessToken: String) async throws {}
+
     func getVault(accessToken: String) async throws -> VaultState? {
         if !scriptedGetErrors.isEmpty {
             throw scriptedGetErrors.removeFirst()

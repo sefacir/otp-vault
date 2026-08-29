@@ -9,8 +9,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Locale;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +30,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokens;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final TokenDenylist denylist;
     private final SecureRandom random = new SecureRandom();
     private final String timingHash;
 
@@ -34,11 +38,13 @@ public class AuthService {
             UserRepository users,
             RefreshTokenRepository refreshTokens,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService) {
+            JwtService jwtService,
+            TokenDenylist denylist) {
         this.users = users;
         this.refreshTokens = refreshTokens;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.denylist = denylist;
         this.timingHash = passwordEncoder.encode("timing-equalizer-not-a-real-password");
     }
 
@@ -48,8 +54,19 @@ public class AuthService {
         if (users.existsByEmail(normalized)) {
             throw new EmailAlreadyRegistered();
         }
-        AppUser user = users.save(new AppUser(normalized, passwordEncoder.encode(password)));
+        AppUser user;
+        try {
+            user = users.save(new AppUser(normalized, passwordEncoder.encode(password)));
+        } catch (DataIntegrityViolationException raced) {
+            throw new EmailAlreadyRegistered();
+        }
         audit.info("register success user={}", user.getId());
+    }
+
+    public void logout(UUID userId, String jti, Instant accessExpiresAt) {
+        denylist.revoke(jti, accessExpiresAt);
+        refreshTokens.revokeAllForUser(userId);
+        audit.info("logout success user={}", userId);
     }
 
     public TokenResponse login(String email, String password) {
@@ -122,7 +139,7 @@ public class AuthService {
     }
 
     private String normalize(String email) {
-        return email.trim().toLowerCase();
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private String randomToken() {

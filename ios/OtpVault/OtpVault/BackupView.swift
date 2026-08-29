@@ -86,7 +86,12 @@ struct BackupView: View {
     private var accountSection: some View {
         Section {
             Button("Sign out", role: .destructive) {
-                session.signOut()
+                Task {
+                    if let token = session.accessToken {
+                        await controller.signOut(accessToken: token)
+                    }
+                    session.signOut()
+                }
             }
         }
     }

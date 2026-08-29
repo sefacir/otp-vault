@@ -1,8 +1,10 @@
 package dev.otpvault.backend.auth;
 
 import java.util.Map;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -29,9 +31,9 @@ class AuthExceptionHandler {
     }
 
     @ExceptionHandler(AccountLocked.class)
-    ResponseEntity<Map<String, String>> handleLocked(AccountLocked ex) {
+    ResponseEntity<Map<String, String>> handleLocked() {
         return ResponseEntity.status(HttpStatus.LOCKED)
-                .body(Map.of("error", "account_locked", "until", ex.until.toString()));
+                .body(Map.of("error", "account_locked"));
     }
 
     @ExceptionHandler(RateLimited.class)
@@ -48,5 +50,17 @@ class AuthExceptionHandler {
                 .orElse("invalid request");
         return ResponseEntity.badRequest()
                 .body(Map.of("error", "validation_failed", "detail", detail));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<Map<String, String>> handleUnreadable() {
+        return ResponseEntity.badRequest()
+                .body(Map.of("error", "malformed_request"));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<Map<String, String>> handleDataIntegrity() {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "conflict"));
     }
 }

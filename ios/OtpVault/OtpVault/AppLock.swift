@@ -11,8 +11,10 @@ struct AppLock<Content: View>: View {
 
     var body: some View {
         ZStack {
-            if unlocked {
+            if unlocked && scenePhase == .active {
                 content()
+            } else if unlocked {
+                PrivacyCover()
             } else {
                 LockScreen(authenticating: authenticating, onUnlock: authenticate)
             }
@@ -49,6 +51,21 @@ struct AppLock<Content: View>: View {
                 unlocked = success
             }
         }
+    }
+}
+
+private struct PrivacyCover: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("OtpVault")
+                .font(.headline)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
     }
 }
 

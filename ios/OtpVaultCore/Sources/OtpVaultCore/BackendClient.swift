@@ -28,6 +28,7 @@ public protocol BackendAPI: Sendable {
     func register(email: String, password: String) async throws
     func login(email: String, password: String) async throws -> AuthTokens
     func refresh(refreshToken: String) async throws -> AuthTokens
+    func logout(accessToken: String) async throws
     func getVault(accessToken: String) async throws -> VaultState?
     func putVault(envelope: String, expectedVersion: Int?, accessToken: String) async throws -> Int
     func deleteVault(accessToken: String) async throws
@@ -87,6 +88,10 @@ public struct BackendClient: BackendAPI, Sendable {
         let data = try await send("/auth/refresh", method: "POST",
                                   body: ["refreshToken": refreshToken], accessToken: nil)
         return try decode(AuthTokens.self, from: data)
+    }
+
+    public func logout(accessToken: String) async throws {
+        _ = try await send("/auth/logout", method: "POST", body: nil, accessToken: accessToken)
     }
 
     public func getVault(accessToken: String) async throws -> VaultState? {

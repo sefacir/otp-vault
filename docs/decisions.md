@@ -2,14 +2,48 @@
 
 Short log of choices and why, newest first.
 
+## 2026-08-29 — Final audit fixes
+
+Full read-through of every backend and iOS source file plus runtime probing. Fixes:
+
+- `OtpAuthURI.parse` now rejects `digits` outside 6..8 and `period` outside 0 < p <= 300,
+  and rejects a present-but-unparseable `digits`/`period` instead of silently defaulting.
+  `TOTP.init` also clamps (`digits` 1..9, non-positive `period` -> 30) so a hand-built
+  `TOTP` can never trap on `pow`/divide-by-zero.
+- `AuthService.register` catches `DataIntegrityViolationException` from the unique-email
+  constraint and maps it to 409, closing the check-then-insert race that previously
+  surfaced as a 401 to the loser.
+- Email normalisation and rate-limit identifier keys use `toLowerCase(Locale.ROOT)`
+  (locale-independent; avoids the Turkish dotless-i class of bugs).
+- `server.forward-headers-strategy` is now `${OTPVAULT_FORWARD_HEADERS:none}` — default
+  off, opt in only when a trusted proxy overwrites `X-Forwarded-For`. Prevents an
+  attacker rotating `XFF` to dodge the per-IP rate-limit bucket.
+- `account_locked` response no longer echoes the `until` timestamp (was a lockout-window
+  oracle). Status 423 alone.
+- `OTPVAULT_JWT_SECRET` is required with no fallback. `JwtService` refuses a blank or
+  sub-32-byte secret at startup in every profile, so the service cannot boot on a known
+  weak key. Tests carry their own secret in `src/test/resources/application.properties`;
+  CI sets one in the workflow env; local dev must export it.
+- Access-token revocation: `POST /auth/logout` (authenticated) adds the caller's `jti`
+  to an in-memory `TokenDenylist` until the token's own expiry and revokes the user's
+  refresh-token family. `JwtAuthenticationFilter` rejects a denylisted `jti`. Same
+  single-instance caveat as the rate limiter — a shared store (Redis) is the multi-node
+  answer. iOS "Sign out" now calls `/auth/logout` best-effort before clearing local state.
+- `AuthExceptionHandler` gained `HttpMessageNotReadableException` -> 400 and a defensive
+  `DataIntegrityViolationException` -> 409 instead of leaking a 500.
+- iOS: `AppLock` renders an opaque cover whenever the scene is not `.active`, so the
+  app-switcher snapshot cannot capture live codes. Not unit-tested (no app test target);
+  verify visually in the simulator.
+
 ## 2026-08-29 — Backend auth (M3)
 
 - Spring Security 7 stateless filter chain; `/auth/register|login|refresh`, `/health`,
   `/actuator/**` are public, everything else needs a Bearer JWT.
 - Passwords: `Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8()` (Argon2id, needs
   BouncyCastle).
-- Access token: HS256 JWT, 15 min, `jti` per token. Secret from `OTPVAULT_JWT_SECRET`
-  (dev default in properties, must be >= 32 bytes).
+- Access token: HS256 JWT, 15 min, `jti` per token. Secret from `OTPVAULT_JWT_SECRET`,
+  required, no fallback, must be >= 32 bytes (see "Final audit fixes"). Revocable via
+  `POST /auth/logout` + `TokenDenylist`.
 - Refresh token: opaque random 256-bit, stored in DB as SHA-256 hash, single-use
   (rotated on `/auth/refresh`), 7 day TTL.
 - Account lockout: 5 failed logins -> `lockedUntil` = now + 15 min. Failed-login

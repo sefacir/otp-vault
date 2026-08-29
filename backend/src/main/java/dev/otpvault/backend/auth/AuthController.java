@@ -4,10 +4,14 @@ import dev.otpvault.backend.auth.dto.LoginRequest;
 import dev.otpvault.backend.auth.dto.RefreshRequest;
 import dev.otpvault.backend.auth.dto.RegisterRequest;
 import dev.otpvault.backend.auth.dto.TokenResponse;
+import dev.otpvault.backend.auth.JwtService.AccessTokenClaims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,9 +59,20 @@ class AuthController {
         return Map.of("userId", userId);
     }
 
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void logout(Authentication authentication) {
+        AccessTokenClaims claims = (AccessTokenClaims) authentication.getCredentials();
+        authService.logout(
+                UUID.fromString((String) authentication.getPrincipal()),
+                claims.jti(),
+                claims.expiresAt());
+    }
+
     private void enforceLimit(String action, HttpServletRequest request, String identifier) {
         boolean ipAllowed = rateLimiter.tryAcquire(action + ":ip:" + request.getRemoteAddr());
-        boolean identifierAllowed = rateLimiter.tryAcquire(action + ":id:" + identifier.trim().toLowerCase());
+        boolean identifierAllowed = rateLimiter.tryAcquire(
+                action + ":id:" + identifier.trim().toLowerCase(Locale.ROOT));
         if (!ipAllowed || !identifierAllowed) {
             throw new RateLimited();
         }
