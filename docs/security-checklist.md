@@ -22,12 +22,12 @@ Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
 
 | ID area | Item | Status | Notes |
 |---------|------|--------|-------|
-| V2 Auth | Password hashing with Argon2id | - | M3 |
-| V2 Auth | Rate limiting on auth endpoints | - | M3 |
-| V2 Auth | Account lockout / throttling | - | M3 |
-| V3 Session | Short-lived access token, rotating refresh | - | M3 |
-| V5 Validation | Request body validation on all endpoints | - | M3 |
-| V7 Logging | Auth events logged, no secrets in logs | - | M3 |
+| V2 Auth | Password hashing with Argon2id | x | Argon2PasswordEncoder v5.8 defaults |
+| V2 Auth | Rate limiting on auth endpoints | x | in-memory fixed window, 10/60s |
+| V2 Auth | Account lockout / throttling | x | 5 fails -> 15 min lock |
+| V3 Session | Short-lived access token, rotating refresh | x | 15 min JWT; refresh stored as hash, rotated on use |
+| V5 Validation | Request body validation on all endpoints | ~ | auth DTOs validated; revisit for /vault in M4 |
+| V7 Logging | Auth events logged, no secrets in logs | - | M6 |
 | V8 Data | Vault stored as ciphertext only | - | M4 |
 | V14 Config | Secrets from env, not committed | - | M0 |
 

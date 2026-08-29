@@ -2,6 +2,22 @@
 
 Short log of choices and why, newest first.
 
+## 2026-08-29 — Backend auth (M3)
+
+- Spring Security 7 stateless filter chain; `/auth/register|login|refresh`, `/health`,
+  `/actuator/**` are public, everything else needs a Bearer JWT.
+- Passwords: `Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8()` (Argon2id, needs
+  BouncyCastle).
+- Access token: HS256 JWT, 15 min, `jti` per token. Secret from `OTPVAULT_JWT_SECRET`
+  (dev default in properties, must be >= 32 bytes).
+- Refresh token: opaque random 256-bit, stored in DB as SHA-256 hash, single-use
+  (rotated on `/auth/refresh`), 7 day TTL.
+- Account lockout: 5 failed logins -> `lockedUntil` = now + 15 min. Failed-login
+  bookkeeping must NOT be inside a `@Transactional` that also throws, or the counter
+  rolls back.
+- Rate limiting: hand-rolled in-memory fixed window (`ConcurrentHashMap`), 10 requests
+  per 60s per IP + action. Move to Redis/Bucket4j if this ever runs multi-instance.
+
 ## 2026-08-29 — Backend persistence
 
 - PostgreSQL 17 via `backend/docker-compose.yml` for local dev; CI runs a matching

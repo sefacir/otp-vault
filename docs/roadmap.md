@@ -44,10 +44,10 @@ Done when: signup and login work, issue JWTs, rate limiting and account lockout 
 place, data is in PostgreSQL.
 
 - [x] PostgreSQL via docker-compose for local dev (Spring Data JPA wired, CI has a pg service)
-- [ ] User entity, signup with password hashing (Argon2id)
-- [ ] Login, short-lived access JWT + refresh token
-- [ ] Rate limiting on auth endpoints
-- [ ] Account lockout after repeated failures
+- [x] User entity, signup with password hashing (Argon2id)
+- [x] Login, short-lived access JWT (15 min) + rotating stored refresh token (7 days)
+- [x] Rate limiting on auth endpoints (10 / 60s per IP + action)
+- [x] Account lockout after repeated failures (5 fails -> 15 min lock)
 
 ## M4 — Encrypted backup
 
