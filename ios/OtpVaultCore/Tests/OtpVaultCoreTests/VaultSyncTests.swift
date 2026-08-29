@@ -6,6 +6,8 @@ private final class FakeBackend: BackendAPI, @unchecked Sendable {
     var envelope: String?
     var version = 0
     var putCalls: [(envelope: String, expected: Int?)] = []
+    var scriptedPutErrors: [BackendClient.ClientError] = []
+    var refreshCount = 0
 
     func register(email: String, password: String) async throws {}
 
@@ -14,7 +16,8 @@ private final class FakeBackend: BackendAPI, @unchecked Sendable {
     }
 
     func refresh(refreshToken: String) async throws -> AuthTokens {
-        AuthTokens(accessToken: "a2", refreshToken: "r2", expiresInSeconds: 900)
+        refreshCount += 1
+        return AuthTokens(accessToken: "a2", refreshToken: "r2", expiresInSeconds: 900)
     }
 
     func getVault(accessToken: String) async throws -> VaultState? {
@@ -23,6 +26,9 @@ private final class FakeBackend: BackendAPI, @unchecked Sendable {
     }
 
     func putVault(envelope: String, expectedVersion: Int?, accessToken: String) async throws -> Int {
+        if !scriptedPutErrors.isEmpty {
+            throw scriptedPutErrors.removeFirst()
+        }
         putCalls.append((envelope, expectedVersion))
         guard (expectedVersion ?? 0) == version else {
             throw BackendClient.ClientError.conflict
@@ -115,6 +121,51 @@ final class VaultSyncTests: XCTestCase {
         } catch {
             XCTFail("unexpected \(error)")
         }
+    }
+
+    private let tokens = AuthTokens(accessToken: "a", refreshToken: "r", expiresInSeconds: 900)
+
+    func testPushWithRetryRefreshesOn401ThenSucceeds() async throws {
+        let backend = FakeBackend()
+        backend.scriptedPutErrors = [.unauthorized]
+
+        let result = try await VaultSync.pushWithRetry(
+            plaintext: plaintext, masterPassword: "pw", knownVersion: nil,
+            tokens: tokens, api: backend, iterations: iterations
+        )
+
+        XCTAssertEqual(result.version, 1)
+        XCTAssertEqual(result.tokens.accessToken, "a2")
+        XCTAssertEqual(backend.refreshCount, 1)
+    }
+
+    func testPushWithRetryGivesUpAfterSecond401() async {
+        let backend = FakeBackend()
+        backend.scriptedPutErrors = [.unauthorized, .unauthorized]
+        do {
+            _ = try await VaultSync.pushWithRetry(
+                plaintext: plaintext, masterPassword: "pw", knownVersion: nil,
+                tokens: tokens, api: backend, iterations: iterations
+            )
+            XCTFail("expected unauthorized")
+        } catch BackendClient.ClientError.unauthorized {
+            // expected
+        } catch {
+            XCTFail("unexpected \(error)")
+        }
+    }
+
+    func testPushWithRetryResolvesConflictByReReadingVersion() async throws {
+        let backend = FakeBackend()
+        backend.envelope = "{}"
+        backend.version = 2
+
+        let result = try await VaultSync.pushWithRetry(
+            plaintext: plaintext, masterPassword: "pw", knownVersion: nil,
+            tokens: tokens, api: backend, iterations: iterations
+        )
+
+        XCTAssertEqual(result.version, 3)
     }
 
     func testPushStoresDecodableEnvelope() async throws {
