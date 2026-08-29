@@ -17,6 +17,11 @@ final class AccountStore {
         persist()
     }
 
+    func replaceAll(_ newAccounts: [Account]) {
+        accounts = newAccounts
+        persist()
+    }
+
     func delete(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
             accounts.remove(at: index)

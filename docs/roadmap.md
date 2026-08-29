@@ -65,9 +65,9 @@ backend.
 Done when: on a fresh device, sign in, download the blob, enter the master password, and
 all accounts come back.
 
-- [ ] iOS restore flow end to end
-- [ ] Conflict handling (server version vs local)
-- [ ] Wrong-password path fails cleanly
+- [x] iOS restore flow end to end (VaultSync.pullWithRetry + BackupView "Restore", verified)
+- [x] Conflict handling (server version vs local) — pushWithRetry re-reads version, local wins
+- [x] Wrong-password path fails cleanly ("Wrong master password", local accounts untouched)
 
 ## M6 — Hardening
 

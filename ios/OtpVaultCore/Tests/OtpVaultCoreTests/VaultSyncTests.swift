@@ -7,6 +7,7 @@ private final class FakeBackend: BackendAPI, @unchecked Sendable {
     var version = 0
     var putCalls: [(envelope: String, expected: Int?)] = []
     var scriptedPutErrors: [BackendClient.ClientError] = []
+    var scriptedGetErrors: [BackendClient.ClientError] = []
     var refreshCount = 0
 
     func register(email: String, password: String) async throws {}
@@ -21,6 +22,9 @@ private final class FakeBackend: BackendAPI, @unchecked Sendable {
     }
 
     func getVault(accessToken: String) async throws -> VaultState? {
+        if !scriptedGetErrors.isEmpty {
+            throw scriptedGetErrors.removeFirst()
+        }
         guard let envelope else { return nil }
         return VaultState(envelope: envelope, version: version, updatedAt: "x")
     }
@@ -166,6 +170,65 @@ final class VaultSyncTests: XCTestCase {
         )
 
         XCTAssertEqual(result.version, 3)
+    }
+
+    func testPullWithRetryRoundTrips() async throws {
+        let backend = FakeBackend()
+        _ = try await VaultSync.push(
+            plaintext: plaintext, masterPassword: "pw", currentVersion: nil,
+            accessToken: "t", api: backend, iterations: iterations
+        )
+        let result = try await VaultSync.pullWithRetry(masterPassword: "pw", tokens: tokens, api: backend)
+        XCTAssertEqual(result?.plaintext, plaintext)
+        XCTAssertEqual(result?.version, 1)
+    }
+
+    func testPullWithRetryReturnsNilWhenNoBackup() async throws {
+        let result = try await VaultSync.pullWithRetry(masterPassword: "pw", tokens: tokens, api: FakeBackend())
+        XCTAssertNil(result)
+    }
+
+    func testPullWithRetryRefreshesOn401() async throws {
+        let backend = FakeBackend()
+        _ = try await VaultSync.push(
+            plaintext: plaintext, masterPassword: "pw", currentVersion: nil,
+            accessToken: "t", api: backend, iterations: iterations
+        )
+        backend.scriptedGetErrors = [.unauthorized]
+
+        let result = try await VaultSync.pullWithRetry(masterPassword: "pw", tokens: tokens, api: backend)
+        XCTAssertEqual(result?.plaintext, plaintext)
+        XCTAssertEqual(result?.tokens.accessToken, "a2")
+        XCTAssertEqual(backend.refreshCount, 1)
+    }
+
+    func testPullWithRetryGivesUpAfterSecond401() async {
+        let backend = FakeBackend()
+        backend.scriptedGetErrors = [.unauthorized, .unauthorized]
+        do {
+            _ = try await VaultSync.pullWithRetry(masterPassword: "pw", tokens: tokens, api: backend)
+            XCTFail("expected unauthorized")
+        } catch BackendClient.ClientError.unauthorized {
+            // expected
+        } catch {
+            XCTFail("unexpected \(error)")
+        }
+    }
+
+    func testPullWithRetryWrongPasswordFails() async throws {
+        let backend = FakeBackend()
+        _ = try await VaultSync.push(
+            plaintext: plaintext, masterPassword: "right", currentVersion: nil,
+            accessToken: "t", api: backend, iterations: iterations
+        )
+        do {
+            _ = try await VaultSync.pullWithRetry(masterPassword: "wrong", tokens: tokens, api: backend)
+            XCTFail("expected failure")
+        } catch let error as VaultCrypto.CryptoError {
+            XCTAssertEqual(error, .decryptionFailed)
+        } catch {
+            XCTFail("unexpected \(error)")
+        }
     }
 
     func testPushStoresDecodableEnvelope() async throws {

@@ -61,6 +61,32 @@ public enum VaultSync {
         }
     }
 
+    public static func pullWithRetry(
+        masterPassword: String,
+        tokens: AuthTokens,
+        api: BackendAPI
+    ) async throws -> (plaintext: Data, version: Int, tokens: AuthTokens)? {
+        var tokens = tokens
+        var refreshed = false
+
+        while true {
+            do {
+                guard let result = try await pull(
+                    masterPassword: masterPassword,
+                    accessToken: tokens.accessToken,
+                    api: api
+                ) else {
+                    return nil
+                }
+                return (result.plaintext, result.version, tokens)
+            } catch BackendClient.ClientError.unauthorized {
+                guard !refreshed else { throw BackendClient.ClientError.unauthorized }
+                refreshed = true
+                tokens = try await api.refresh(refreshToken: tokens.refreshToken)
+            }
+        }
+    }
+
     public static func pull(
         masterPassword: String,
         accessToken: String,

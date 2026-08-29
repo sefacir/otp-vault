@@ -51,7 +51,9 @@ struct AccountsView: View {
                 ScanSheet { store.add(Account(from: $0)) }
             }
             .sheet(isPresented: $showingBackup) {
-                BackupView(accounts: store.accounts)
+                BackupView(accounts: store.accounts) { restored in
+                    store.replaceAll(restored)
+                }
             }
             .sheet(item: $editing) { account in
                 EditAccountView(account: account) { store.update($0) }

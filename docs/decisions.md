@@ -35,6 +35,18 @@ Short log of choices and why, newest first.
 - Wrong master password surfaces as `CryptoError.decryptionFailed` (GCM tag mismatch),
   never a partial/garbage decrypt.
 
+## 2026-08-29 — iOS restore flow (M5)
+
+- `VaultSync.pullWithRetry` mirrors `pushWithRetry`: GET vault -> decrypt -> return
+  plaintext + version; one token refresh on 401.
+- `BackupView` gains a "Restore from backup" button behind a confirmation dialog
+  ("Replace all local accounts?"). On success `AccountStore.replaceAll` swaps the whole
+  list and persists to the Keychain.
+- Wrong master password -> GCM tag mismatch -> `CryptoError.decryptionFailed` ->
+  "Wrong master password"; the local vault is never touched on failure.
+- Verified in the simulator: delete an account locally, restore, the account (and its
+  working TOTP) comes back; wrong password shows the error and changes nothing.
+
 ## 2026-08-29 — iOS backup flow (M4c)
 
 - `BackendClient` (URLSession, async) in `OtpVaultCore`, behind a `BackendAPI` protocol so

@@ -9,6 +9,7 @@ final class BackupController {
         case idle
         case working
         case done(version: Int)
+        case restored(count: Int, version: Int)
         case error(String)
     }
 
@@ -54,6 +55,30 @@ final class BackupController {
             )
             phase = .done(version: result.version)
             return result
+        } catch {
+            phase = .error(message(for: error))
+            return nil
+        }
+    }
+
+    @MainActor
+    func restore(
+        masterPassword: String,
+        tokens: AuthTokens
+    ) async -> (accounts: [Account], version: Int, tokens: AuthTokens)? {
+        phase = .working
+        do {
+            guard let result = try await VaultSync.pullWithRetry(
+                masterPassword: masterPassword,
+                tokens: tokens,
+                api: client
+            ) else {
+                phase = .error("No backup found for this account.")
+                return nil
+            }
+            let accounts = try JSONDecoder().decode([Account].self, from: result.plaintext)
+            phase = .restored(count: accounts.count, version: result.version)
+            return (accounts, result.version, result.tokens)
         } catch {
             phase = .error(message(for: error))
             return nil
