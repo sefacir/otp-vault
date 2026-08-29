@@ -1,6 +1,39 @@
 import Foundation
 
-public struct BackendClient: Sendable {
+public struct AuthTokens: Codable, Equatable, Sendable {
+    public let accessToken: String
+    public let refreshToken: String
+    public let expiresInSeconds: Int
+
+    public init(accessToken: String, refreshToken: String, expiresInSeconds: Int) {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.expiresInSeconds = expiresInSeconds
+    }
+}
+
+public struct VaultState: Codable, Equatable, Sendable {
+    public let envelope: String
+    public let version: Int
+    public let updatedAt: String
+
+    public init(envelope: String, version: Int, updatedAt: String) {
+        self.envelope = envelope
+        self.version = version
+        self.updatedAt = updatedAt
+    }
+}
+
+public protocol BackendAPI: Sendable {
+    func register(email: String, password: String) async throws
+    func login(email: String, password: String) async throws -> AuthTokens
+    func refresh(refreshToken: String) async throws -> AuthTokens
+    func getVault(accessToken: String) async throws -> VaultState?
+    func putVault(envelope: String, expectedVersion: Int?, accessToken: String) async throws -> Int
+    func deleteVault(accessToken: String) async throws
+}
+
+public struct BackendClient: BackendAPI, Sendable {
 
     public enum ClientError: Error, Equatable, Sendable {
         case badRequest
@@ -12,18 +45,6 @@ public struct BackendClient: Sendable {
         case server(Int)
         case transport
         case decoding
-    }
-
-    public struct Tokens: Codable, Equatable, Sendable {
-        public let accessToken: String
-        public let refreshToken: String
-        public let expiresInSeconds: Int
-    }
-
-    public struct VaultState: Codable, Equatable, Sendable {
-        public let envelope: String
-        public let version: Int
-        public let updatedAt: String
     }
 
     private struct PutVaultResult: Decodable {
@@ -43,16 +64,16 @@ public struct BackendClient: Sendable {
                            body: ["email": email, "password": password], accessToken: nil)
     }
 
-    public func login(email: String, password: String) async throws -> Tokens {
+    public func login(email: String, password: String) async throws -> AuthTokens {
         let data = try await send("/auth/login", method: "POST",
                                   body: ["email": email, "password": password], accessToken: nil)
-        return try decode(Tokens.self, from: data)
+        return try decode(AuthTokens.self, from: data)
     }
 
-    public func refresh(refreshToken: String) async throws -> Tokens {
+    public func refresh(refreshToken: String) async throws -> AuthTokens {
         let data = try await send("/auth/refresh", method: "POST",
                                   body: ["refreshToken": refreshToken], accessToken: nil)
-        return try decode(Tokens.self, from: data)
+        return try decode(AuthTokens.self, from: data)
     }
 
     public func getVault(accessToken: String) async throws -> VaultState? {

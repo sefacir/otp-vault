@@ -89,7 +89,7 @@ final class BackendClientTests: XCTestCase {
     func testLoginParsesTokens() async throws {
         respond(200, #"{"accessToken":"a","refreshToken":"r","expiresInSeconds":900}"#)
         let tokens = try await client.login(email: "x@y.z", password: "pw")
-        XCTAssertEqual(tokens, BackendClient.Tokens(accessToken: "a", refreshToken: "r", expiresInSeconds: 900))
+        XCTAssertEqual(tokens, AuthTokens(accessToken: "a", refreshToken: "r", expiresInSeconds: 900))
     }
 
     func testLoginUnauthorized() async {
