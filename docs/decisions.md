@@ -35,6 +35,30 @@ Short log of choices and why, newest first.
 - Wrong master password surfaces as `CryptoError.decryptionFailed` (GCM tag mismatch),
   never a partial/garbage decrypt.
 
+## 2026-08-29 — M6 hardening: supply chain + backend
+
+Supply chain:
+- Dependabot (`.github/dependabot.yml`) — weekly maven / swift / github-actions.
+- `cyclonedx-maven-plugin` emits `META-INF/sbom/application.cdx.json` on every build,
+  uploaded as a CI artifact. CI `dependency-scan` job runs `trivy sbom` on it and fails
+  on HIGH/CRITICAL (scanning the SBOM avoids Maven Central 429s in CI).
+- Bumped `bcprov-jdk18on` 1.78.1 -> 1.85.2 (Trivy flagged CVE-2025-14813).
+
+Backend hardening:
+- Flyway: `spring-boot-starter-flyway` (Boot 4 split the autoconfig into a module) +
+  `flyway-database-postgresql`. `V1__init.sql` holds the current schema; Hibernate is now
+  `ddl-auto=validate`. Existing local DBs need `docker compose down -v` once.
+- JWT carries `iss=otp-vault`; the parser calls `requireIssuer`.
+- `PUT /vault` is rate limited (10 / 60s per user) via the shared `RateLimiter`
+  (`RateLimited` is now public so the vault package can throw it).
+- Audit logging: `audit.auth` and `audit.vault` SLF4J loggers record register / login
+  (success + failure reason) / lockout / refresh / refresh-reuse / vault create-update-
+  delete-conflict. Subject is the userId UUID — no email, token, or hash is ever logged.
+- HSTS header (1 year, includeSubDomains) always configured; `requiresChannel(secure)` is
+  switched on only when `otpvault.security.require-https=true` (prod).
+- `server.forward-headers-strategy=framework` so the rate limiter sees the real client IP
+  behind a trusted proxy.
+
 ## 2026-08-29 — Pre-M6 full review
 
 Top-to-bottom pass over everything through M5. All three targets build clean; 57 iOS-core

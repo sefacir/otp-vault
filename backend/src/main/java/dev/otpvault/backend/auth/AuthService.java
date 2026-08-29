@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
+    private static final Logger audit = LoggerFactory.getLogger("audit.auth");
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
     private static final Duration REFRESH_TTL = Duration.ofDays(7);
@@ -45,33 +48,40 @@ public class AuthService {
         if (users.existsByEmail(normalized)) {
             throw new EmailAlreadyRegistered();
         }
-        users.save(new AppUser(normalized, passwordEncoder.encode(password)));
+        AppUser user = users.save(new AppUser(normalized, passwordEncoder.encode(password)));
+        audit.info("register success user={}", user.getId());
     }
 
     public TokenResponse login(String email, String password) {
         AppUser user = users.findByEmail(normalize(email)).orElse(null);
         if (user == null) {
             passwordEncoder.matches(password, timingHash);
+            audit.warn("login failed reason=unknown-email");
             throw new InvalidCredentials();
         }
 
         Instant now = Instant.now();
         if (user.isLocked(now)) {
+            audit.warn("login blocked reason=locked user={}", user.getId());
             throw new AccountLocked(user.getLockedUntil());
         }
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            if (user.getFailedLoginAttempts() + 1 >= MAX_FAILED_ATTEMPTS) {
+            int attempts = user.getFailedLoginAttempts() + 1;
+            if (attempts >= MAX_FAILED_ATTEMPTS) {
                 users.lockUntil(user.getId(), now.plus(LOCK_DURATION));
+                audit.warn("account locked user={} attempts={}", user.getId(), attempts);
             } else {
                 users.incrementFailedAttempts(user.getId());
             }
+            audit.warn("login failed reason=bad-password user={} attempts={}", user.getId(), attempts);
             throw new InvalidCredentials();
         }
 
         if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
             users.clearLoginFailures(user.getId());
         }
+        audit.info("login success user={}", user.getId());
         return issueTokens(user);
     }
 
@@ -82,6 +92,7 @@ public class AuthService {
         Instant now = Instant.now();
         if (stored.isRevoked()) {
             refreshTokens.revokeAllForUser(stored.getUserId());
+            audit.warn("refresh-token reuse detected, family revoked user={}", stored.getUserId());
             throw new InvalidRefreshToken();
         }
         if (stored.isExpired(now)) {
@@ -90,11 +101,13 @@ public class AuthService {
 
         AppUser user = users.findById(stored.getUserId()).orElseThrow(InvalidRefreshToken::new);
         if (user.isLocked(now)) {
+            audit.warn("refresh blocked reason=locked user={}", user.getId());
             throw new AccountLocked(user.getLockedUntil());
         }
 
         stored.revoke();
         refreshTokens.save(stored);
+        audit.info("refresh success user={}", user.getId());
         return issueTokens(user);
     }
 

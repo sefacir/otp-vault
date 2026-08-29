@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 public class JwtService {
 
     static final String INSECURE_DEV_SECRET = "dev-only-insecure-secret-change-me-min-32-bytes";
+    private static final String ISSUER = "otp-vault";
 
     private final SecretKey key;
     private final Duration accessTtl;
@@ -36,6 +37,7 @@ public class JwtService {
         Instant now = Instant.now();
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
+                .issuer(ISSUER)
                 .subject(userId.toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessTtl)))
@@ -50,6 +52,7 @@ public class JwtService {
     public UUID parseUserId(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key)
+                .requireIssuer(ISSUER)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

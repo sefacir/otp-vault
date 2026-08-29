@@ -173,4 +173,14 @@ class VaultFlowTest {
         users.deleteAll();
         assertEquals(404, statusOf(get("/vault").header("Authorization", "Bearer " + token)));
     }
+
+    @Test
+    void rateLimitsRepeatedPut() throws Exception {
+        String token = tokenFor("v11@example.com");
+        int last = 0;
+        for (int i = 0; i < 12; i++) {
+            last = statusOf(putVault(token, "{\"envelope\":\"blob\"}"));
+        }
+        assertEquals(429, last);
+    }
 }

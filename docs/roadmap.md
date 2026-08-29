@@ -75,8 +75,8 @@ Done when: pinning is on, MASVS/ASVS review is done, dependency + secret scans a
 docs are current.
 
 - [x] Dependency scanning (Trivy HIGH/CRITICAL) + Dependabot + CycloneDX SBOM in CI
+- [x] Backend: Flyway, HSTS + optional HTTPS-only, /vault rate limit, JWT iss, audit logging, forward-headers
 - [ ] Certificate pinning on iOS + configurable base URL
-- [ ] Backend: Flyway, HTTPS/HSTS, /vault rate limit, JWT iss/aud, audit logging
 - [ ] iOS: envelope signing, stronger master-password rule
 - [ ] iOS app unit-test target (Session, AccountStore) + JwtServiceTest
 - [ ] MASVS review pass, findings logged

@@ -30,10 +30,15 @@ Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
 | V3 Session | Short-lived access token, rotating refresh | x | 15 min JWT (jti); refresh stored as SHA-256 hash, single-use |
 | V3 Session | Refresh-token reuse detection | x | replay of a revoked token revokes the whole family |
 | V3 Session | Locked account cannot mint tokens via refresh | x | refresh re-checks lock |
-| V5 Validation | Request body validation on all endpoints | ~ | auth DTOs validated; revisit for /vault in M4 |
-| V7 Logging | Auth events logged, no secrets in logs | - | M6 |
+| V5 Validation | Request body validation on all endpoints | x | auth + vault DTOs validated (email, size caps) |
+| V7 Logging | Auth + vault events logged, no PII/secrets | x | `audit.auth` / `audit.vault` loggers, userId only |
 | V7 Data retention | Expired / revoked refresh tokens purged | x | hourly @Scheduled cleanup |
 | V8 Data | Vault stored as ciphertext only | x | server stores opaque envelope; verified via live test |
+| V8 Data | Schema managed by versioned migrations | x | Flyway V1; Hibernate ddl-auto=validate |
+| V13 API | Rate limit on vault writes | x | 10 / 60s per user on PUT /vault |
+| V3 Session | Access token has issuer claim, validated | x | `iss=otp-vault`, parser requireIssuer |
+| V9 Comms | HSTS header + optional HTTPS-only | x | HSTS 1y; `requiresChannel` gated by `otpvault.security.require-https` |
+| V9 Comms | Correct client IP behind proxy | x | `server.forward-headers-strategy=framework` |
 | CRYPTO | Vault key derivation (PBKDF2-HMAC-SHA256, 600k) | x | client-side; key never sent to server |
 | CRYPTO | Vault encryption AES-256-GCM, fresh salt + nonce per seal | x | VaultCrypto, 8 tests |
 | V13 API | Actuator locked down except /actuator/health | x | /actuator/** denyAll |

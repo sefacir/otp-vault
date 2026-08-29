@@ -1,5 +1,7 @@
 package dev.otpvault.backend.vault;
 
+import dev.otpvault.backend.auth.RateLimited;
+import dev.otpvault.backend.auth.RateLimiter;
 import dev.otpvault.backend.vault.dto.PutVaultRequest;
 import dev.otpvault.backend.vault.dto.VaultResponse;
 import jakarta.validation.Valid;
@@ -20,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 class VaultController {
 
     private final VaultService vaultService;
+    private final RateLimiter rateLimiter;
 
-    VaultController(VaultService vaultService) {
+    VaultController(VaultService vaultService, RateLimiter rateLimiter) {
         this.vaultService = vaultService;
+        this.rateLimiter = rateLimiter;
     }
 
     @GetMapping
@@ -32,6 +36,9 @@ class VaultController {
 
     @PutMapping
     Map<String, Object> put(@AuthenticationPrincipal String userId, @Valid @RequestBody PutVaultRequest body) {
+        if (!rateLimiter.tryAcquire("vault-put:" + userId)) {
+            throw new RateLimited();
+        }
         VaultResult result = vaultService.save(UUID.fromString(userId), body.envelope(), body.expectedVersion());
         return Map.of("version", result.version(), "updatedAt", result.updatedAt().toString());
     }
