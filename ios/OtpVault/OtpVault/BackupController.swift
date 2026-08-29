@@ -16,8 +16,8 @@ final class BackupController {
     private let client: BackendClient
     var phase: Phase = .idle
 
-    init(baseURL: URL = URL(string: "http://localhost:8080")!) {
-        client = BackendClient(baseURL: baseURL)
+    init(baseURL: URL = AppConfig.apiBaseURL, pinning: CertificatePinning = AppConfig.certificatePinning) {
+        client = BackendClient(baseURL: baseURL, pinning: pinning)
     }
 
     @MainActor

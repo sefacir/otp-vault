@@ -12,6 +12,7 @@ public enum VaultCrypto {
 
     public static let algorithmName = "pbkdf2-hmac-sha256"
     public static let cipherName = "AES-256-GCM"
+    public static let formatVersion = 2
     public static let defaultIterations = 600_000
     public static let saltLength = 16
     public static let keyLength = 32
@@ -28,11 +29,16 @@ public enum VaultCrypto {
             saltBase64: randomBytes(saltLength).base64EncodedString()
         )
         let key = try deriveKey(password: password, params: params)
-        let sealedBox = try AES.GCM.seal(plaintext, using: key)
+        let sealedBox = try AES.GCM.seal(
+            plaintext,
+            using: key,
+            authenticating: headerAAD(cipher: cipherName, params: params)
+        )
         guard let combined = sealedBox.combined else {
             throw CryptoError.decryptionFailed
         }
         return BackupEnvelope(
+            format: formatVersion,
             version: version,
             kdf: params,
             cipher: cipherName,
@@ -42,6 +48,7 @@ public enum VaultCrypto {
 
     public static func open(_ envelope: BackupEnvelope, password: String) throws -> Data {
         guard
+            envelope.format == formatVersion,
             envelope.cipher == cipherName,
             let blob = Data(base64Encoded: envelope.blobBase64)
         else {
@@ -51,7 +58,11 @@ public enum VaultCrypto {
         let key = try deriveKey(password: password, params: envelope.kdf)
         do {
             let sealedBox = try AES.GCM.SealedBox(combined: blob)
-            return try AES.GCM.open(sealedBox, using: key)
+            return try AES.GCM.open(
+                sealedBox,
+                using: key,
+                authenticating: headerAAD(cipher: envelope.cipher, params: envelope.kdf)
+            )
         } catch {
             throw CryptoError.decryptionFailed
         }
@@ -88,6 +99,17 @@ public enum VaultCrypto {
             throw CryptoError.keyDerivationFailed
         }
         return SymmetricKey(data: Data(derived))
+    }
+
+    private static func headerAAD(cipher: String, params: KdfParams) -> Data {
+        let canonical = [
+            String(formatVersion),
+            cipher,
+            params.algorithm,
+            String(params.iterations),
+            params.saltBase64
+        ].joined(separator: "|")
+        return Data(canonical.utf8)
     }
 
     private static func randomBytes(_ count: Int) -> Data {

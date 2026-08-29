@@ -72,9 +72,14 @@ struct BackupView: View {
                 LabeledContent("Last backup", value: "v\(version)")
             }
             Button("Back up now") { performBackup() }
-                .disabled(masterPassword.count < 8 || accounts.isEmpty || isWorking)
+                .disabled(!masterPasswordLongEnough || accounts.isEmpty || isWorking)
             Button("Restore from backup") { confirmingRestore = true }
-                .disabled(masterPassword.count < 8 || isWorking)
+                .disabled(!masterPasswordLongEnough || isWorking)
+            if !masterPassword.isEmpty && !masterPasswordLongEnough {
+                Text("Use at least \(AppConfig.minimumMasterPasswordLength) characters.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -113,6 +118,10 @@ struct BackupView: View {
 
     private var isWorking: Bool {
         controller.phase == .working
+    }
+
+    private var masterPasswordLongEnough: Bool {
+        masterPassword.count >= AppConfig.minimumMasterPasswordLength
     }
 
     private func performBackup() {

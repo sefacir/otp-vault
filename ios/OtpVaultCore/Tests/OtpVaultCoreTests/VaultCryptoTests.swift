@@ -70,6 +70,37 @@ final class VaultCryptoTests: XCTestCase {
         XCTAssertEqual(opened, plaintext)
     }
 
+    func testTamperedKdfParamsFail() throws {
+        let envelope = try VaultCrypto.seal(plaintext, password: "pw", version: 1, iterations: iterations)
+        let weakened = BackupEnvelope(
+            version: envelope.version,
+            kdf: KdfParams(
+                algorithm: envelope.kdf.algorithm,
+                iterations: 1,
+                saltBase64: envelope.kdf.saltBase64
+            ),
+            cipher: envelope.cipher,
+            blobBase64: envelope.blobBase64
+        )
+        XCTAssertThrowsError(try VaultCrypto.open(weakened, password: "pw")) { error in
+            XCTAssertEqual(error as? VaultCrypto.CryptoError, .decryptionFailed)
+        }
+    }
+
+    func testWrongFormatRejected() throws {
+        let envelope = try VaultCrypto.seal(plaintext, password: "pw", version: 1, iterations: iterations)
+        let legacy = BackupEnvelope(
+            format: 1,
+            version: envelope.version,
+            kdf: envelope.kdf,
+            cipher: envelope.cipher,
+            blobBase64: envelope.blobBase64
+        )
+        XCTAssertThrowsError(try VaultCrypto.open(legacy, password: "pw")) { error in
+            XCTAssertEqual(error as? VaultCrypto.CryptoError, .malformedEnvelope)
+        }
+    }
+
     func testMalformedEnvelopeRejected() {
         let bad = BackupEnvelope(
             version: 1,

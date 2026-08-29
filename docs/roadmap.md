@@ -76,8 +76,7 @@ docs are current.
 
 - [x] Dependency scanning (Trivy HIGH/CRITICAL) + Dependabot + CycloneDX SBOM in CI
 - [x] Backend: Flyway, HSTS + optional HTTPS-only, /vault rate limit, JWT iss, audit logging, forward-headers
-- [ ] Certificate pinning on iOS + configurable base URL
-- [ ] iOS: envelope signing, stronger master-password rule
+- [x] iOS: certificate pinning + configurable base URL, envelope AAD binding, master-password min 10, jailbreak banner
 - [ ] iOS app unit-test target (Session, AccountStore) + JwtServiceTest
 - [ ] MASVS review pass, findings logged
 - [ ] ASVS review pass, findings logged

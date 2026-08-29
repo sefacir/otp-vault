@@ -59,6 +59,19 @@ public struct BackendClient: BackendAPI, Sendable {
         self.session = session
     }
 
+    public init(baseURL: URL, pinning: CertificatePinning) {
+        self.baseURL = baseURL
+        if pinning.isEnabled {
+            self.session = URLSession(
+                configuration: .ephemeral,
+                delegate: PinnedSessionDelegate(pinning: pinning),
+                delegateQueue: nil
+            )
+        } else {
+            self.session = .shared
+        }
+    }
+
     public func register(email: String, password: String) async throws {
         _ = try await send("/auth/register", method: "POST",
                            body: ["email": email, "password": password], accessToken: nil)

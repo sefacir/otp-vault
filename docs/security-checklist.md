@@ -10,13 +10,14 @@ Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
 | STORAGE | Secrets in Keychain, not UserDefaults / plist | - | M2 |
 | STORAGE | Keychain access control: device-only, biometry | - | M2 |
 | STORAGE | No secrets in logs, backups, screenshots | - | M2 |
-| CRYPTO  | Argon2id params chosen and documented | - | M4 |
-| CRYPTO  | AES-256-GCM, unique nonce per encryption | - | M4 |
-| CRYPTO  | No hardcoded keys | - | |
-| AUTH    | App lock via LocalAuthentication | - | M2 |
-| NETWORK | TLS only, ATS not weakened | - | M3 |
-| NETWORK | Certificate pinning | - | M6 |
-| RESILIENCE | Jailbreak detection | - | later |
+| CRYPTO  | Vault KDF chosen + documented (PBKDF2 600k) | x | M4; Argon2id deferred to avoid an SPM dep |
+| CRYPTO  | AES-256-GCM, fresh salt + nonce per seal | x | M4 (VaultCrypto) |
+| CRYPTO  | KDF params authenticated (server cannot weaken) | x | M6; params bound into GCM AAD, envelope format 2 |
+| CRYPTO  | No hardcoded keys | x | keys derived from master password only |
+| AUTH    | App lock via LocalAuthentication | x | M2 |
+| NETWORK | ATS not weakened except localhost dev | x | `NSAllowsLocalNetworking` only |
+| NETWORK | Certificate pinning | x | M6; `CertificatePinning` + `PinnedSessionDelegate`, config-driven (pins empty in dev) |
+| RESILIENCE | Jailbreak detection (defense in depth, non-blocking) | x | M6; `DeviceIntegrity` + warning banner |
 
 ## ASVS — backend
 

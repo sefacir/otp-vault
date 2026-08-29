@@ -13,12 +13,14 @@ public struct KdfParams: Codable, Equatable, Sendable {
 }
 
 public struct BackupEnvelope: Codable, Equatable, Sendable {
+    public let format: Int
     public let version: Int
     public let kdf: KdfParams
     public let cipher: String
     public let blobBase64: String
 
-    public init(version: Int, kdf: KdfParams, cipher: String, blobBase64: String) {
+    public init(format: Int = 2, version: Int, kdf: KdfParams, cipher: String, blobBase64: String) {
+        self.format = format
         self.version = version
         self.kdf = kdf
         self.cipher = cipher

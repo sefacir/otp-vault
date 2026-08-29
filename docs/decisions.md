@@ -59,6 +59,21 @@ Backend hardening:
 - `server.forward-headers-strategy=framework` so the rate limiter sees the real client IP
   behind a trusted proxy.
 
+## 2026-08-29 — M6 hardening: iOS
+
+- Envelope format bumped to 2. The KDF params + cipher are now the AES-GCM AAD
+  (`headerAAD` = "format|cipher|algo|iterations|salt"), so a server that weakens the
+  stored params makes `open` fail with `decryptionFailed`. `open` rejects any format != 2.
+  Pre-M6 backups (format 1) will not restore — acceptable, no real users.
+- `CertificatePinning` (SHA-256 of the DER leaf certificate) + `PinnedSessionDelegate`.
+  `BackendClient.init(baseURL:pinning:)` builds a pinned `URLSession` only when pins are
+  present; empty pin set == default handling, so dev/tests are unchanged.
+- `AppConfig` reads `OTPVAULT_API_URL` and `OTPVAULT_PINNED_CERT_SHA256` from the bundle
+  Info dictionary; falls back to `http://localhost:8080` with no pins.
+- Master password minimum raised to 10 characters (`AppConfig.minimumMasterPasswordLength`).
+- `DeviceIntegrity.isCompromised()` — path + sandbox-write checks, guarded to real iOS
+  devices only. Non-blocking: `ContentView` shows a red banner, the app still works.
+
 ## 2026-08-29 — Pre-M6 full review
 
 Top-to-bottom pass over everything through M5. All three targets build clean; 57 iOS-core
