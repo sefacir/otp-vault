@@ -29,6 +29,12 @@ final class AccountStore {
         persist()
     }
 
+    func update(_ account: Account) {
+        guard let index = accounts.firstIndex(where: { $0.id == account.id }) else { return }
+        accounts[index] = account
+        persist()
+    }
+
     private func load() {
         guard
             let data = Keychain.read(service: Self.service, account: Self.account),

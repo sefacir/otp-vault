@@ -5,6 +5,7 @@ struct AccountsView: View {
     @State private var store = AccountStore()
     @State private var showingAdd = false
     @State private var showingScanner = false
+    @State private var editing: Account?
 
     var body: some View {
         NavigationStack {
@@ -12,6 +13,12 @@ struct AccountsView: View {
                 List {
                     ForEach(store.accounts) { account in
                         AccountRow(account: account, now: context.date)
+                            .swipeActions(edge: .leading) {
+                                Button("Edit", systemImage: "pencil") {
+                                    editing = account
+                                }
+                                .tint(.blue)
+                            }
                     }
                     .onDelete(perform: store.delete)
                 }
@@ -36,6 +43,9 @@ struct AccountsView: View {
             }
             .sheet(isPresented: $showingScanner) {
                 ScanSheet { store.add(Account(from: $0)) }
+            }
+            .sheet(item: $editing) { account in
+                EditAccountView(account: account) { store.update($0) }
             }
         }
     }
