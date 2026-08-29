@@ -3,6 +3,7 @@ package dev.otpvault.backend.auth;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,12 +18,22 @@ public class RateLimiter {
 
     public boolean tryAcquire(String key) {
         Instant now = Instant.now();
-        Window updated = windows.compute(key, (k, current) -> {
+        Window updated = windows.compute(key, (ignored, current) -> {
             if (current == null || now.isAfter(current.resetAt())) {
                 return new Window(now.plus(window), 1);
             }
             return new Window(current.resetAt(), current.count() + 1);
         });
         return updated.count() <= maxRequests;
+    }
+
+    @Scheduled(fixedDelay = 300_000L)
+    void sweepExpired() {
+        Instant now = Instant.now();
+        windows.entrySet().removeIf(entry -> now.isAfter(entry.getValue().resetAt()));
+    }
+
+    void reset() {
+        windows.clear();
     }
 }

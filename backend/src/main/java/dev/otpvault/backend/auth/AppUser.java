@@ -4,7 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -64,16 +63,16 @@ public class AppUser {
         return lockedUntil != null && lockedUntil.isAfter(now);
     }
 
-    public void registerFailedLogin(int maxAttempts, Duration lockDuration, Instant now) {
-        this.failedLoginAttempts++;
-        if (this.failedLoginAttempts >= maxAttempts) {
-            this.lockedUntil = now.plus(lockDuration);
-            this.failedLoginAttempts = 0;
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
         }
+        return other instanceof AppUser user && id != null && id.equals(user.id);
     }
 
-    public void registerSuccessfulLogin() {
-        this.failedLoginAttempts = 0;
-        this.lockedUntil = null;
+    @Override
+    public int hashCode() {
+        return AppUser.class.hashCode();
     }
 }

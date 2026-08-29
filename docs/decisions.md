@@ -16,7 +16,30 @@ Short log of choices and why, newest first.
   bookkeeping must NOT be inside a `@Transactional` that also throws, or the counter
   rolls back.
 - Rate limiting: hand-rolled in-memory fixed window (`ConcurrentHashMap`), 10 requests
-  per 60s per IP + action. Move to Redis/Bucket4j if this ever runs multi-instance.
+  per 60s, keyed both by client IP and by identifier (email). An hourly `@Scheduled`
+  sweep drops expired windows. Move to Redis/Bucket4j if this ever runs multi-instance.
+- Rate limiter keys on `request.getRemoteAddr()`. Behind a reverse proxy this is the
+  proxy IP (one shared bucket) unless `server.forward-headers-strategy` is set and the
+  proxy is trusted to overwrite `X-Forwarded-For`. Not configured yet — dev runs direct.
+
+## 2026-08-29 — Backend auth hardening (post-review)
+
+- Login timing: on unknown email we still run one `passwordEncoder.matches` against a
+  throwaway hash so response time does not reveal whether the account exists.
+- Failed-login counter and lock are applied with atomic `@Modifying` update queries, not
+  read-modify-write on the entity, so concurrent bad logins cannot lose an increment.
+  These repo methods are `@Transactional` on their own; `login()` is deliberately NOT
+  `@Transactional` so the counter write survives the `InvalidCredentials` throw.
+- Refresh tokens: replaying a token that is present but already revoked is treated as
+  theft -> `revokeAllForUser` kills every refresh token for that user and the caller is
+  forced to log in again. `refresh()` also re-checks account lock.
+- `JwtService` refuses to start if the built-in dev secret is used while the `prod`
+  profile is active.
+- Actuator: only `/actuator/health/**` is public, `/actuator/**` is `denyAll`.
+  Unauthenticated requests to protected endpoints return 401 (`HttpStatusEntryPoint`),
+  not Spring's default 403.
+- `AuthFlowTest` (MockMvc, hits Postgres) covers register/login/me, lockout, refresh
+  rotation + reuse detection, rate limiting, and the timing-equal unknown-email path.
 
 ## 2026-08-29 — Backend persistence
 

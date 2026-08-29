@@ -23,13 +23,20 @@ Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
 | ID area | Item | Status | Notes |
 |---------|------|--------|-------|
 | V2 Auth | Password hashing with Argon2id | x | Argon2PasswordEncoder v5.8 defaults |
-| V2 Auth | Rate limiting on auth endpoints | x | in-memory fixed window, 10/60s |
-| V2 Auth | Account lockout / throttling | x | 5 fails -> 15 min lock |
-| V3 Session | Short-lived access token, rotating refresh | x | 15 min JWT; refresh stored as hash, rotated on use |
+| V2 Auth | Login timing constant for unknown vs known email | x | dummy-hash match on miss |
+| V2 Auth | Rate limiting on auth endpoints | x | fixed window 10/60s, keyed by IP and by identifier |
+| V2 Auth | Account lockout / throttling | x | 5 fails -> 15 min lock; atomic counter updates |
+| V2 Auth | Registration does not leak account existence | ~ | still returns 409; accepted until email verification exists |
+| V3 Session | Short-lived access token, rotating refresh | x | 15 min JWT (jti); refresh stored as SHA-256 hash, single-use |
+| V3 Session | Refresh-token reuse detection | x | replay of a revoked token revokes the whole family |
+| V3 Session | Locked account cannot mint tokens via refresh | x | refresh re-checks lock |
 | V5 Validation | Request body validation on all endpoints | ~ | auth DTOs validated; revisit for /vault in M4 |
 | V7 Logging | Auth events logged, no secrets in logs | - | M6 |
+| V7 Data retention | Expired / revoked refresh tokens purged | x | hourly @Scheduled cleanup |
 | V8 Data | Vault stored as ciphertext only | - | M4 |
-| V14 Config | Secrets from env, not committed | - | M0 |
+| V13 API | Actuator locked down except /actuator/health | x | /actuator/** denyAll |
+| V14 Config | Secrets from env, not committed | ~ | dev JWT secret has a default; startup fails if used with prod profile |
+| V14 Config | Client IP behind proxy | - | rate limiter trusts remoteAddr; needs forward-headers config when proxied |
 
 ## Supply chain
 

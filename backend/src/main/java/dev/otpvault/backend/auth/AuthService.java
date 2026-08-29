@@ -1,6 +1,7 @@
 package dev.otpvault.backend.auth;
 
 import dev.otpvault.backend.auth.dto.TokenResponse;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -24,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final SecureRandom random = new SecureRandom();
+    private final String timingHash;
 
     public AuthService(
             UserRepository users,
@@ -34,6 +36,7 @@ public class AuthService {
         this.refreshTokens = refreshTokens;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.timingHash = passwordEncoder.encode("timing-equalizer-not-a-real-password");
     }
 
     @Transactional
@@ -46,7 +49,11 @@ public class AuthService {
     }
 
     public TokenResponse login(String email, String password) {
-        AppUser user = users.findByEmail(normalize(email)).orElseThrow(InvalidCredentials::new);
+        AppUser user = users.findByEmail(normalize(email)).orElse(null);
+        if (user == null) {
+            passwordEncoder.matches(password, timingHash);
+            throw new InvalidCredentials();
+        }
 
         Instant now = Instant.now();
         if (user.isLocked(now)) {
@@ -54,27 +61,40 @@ public class AuthService {
         }
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            user.registerFailedLogin(MAX_FAILED_ATTEMPTS, LOCK_DURATION, now);
-            users.save(user);
+            if (user.getFailedLoginAttempts() + 1 >= MAX_FAILED_ATTEMPTS) {
+                users.lockUntil(user.getId(), now.plus(LOCK_DURATION));
+            } else {
+                users.incrementFailedAttempts(user.getId());
+            }
             throw new InvalidCredentials();
         }
 
-        user.registerSuccessfulLogin();
-        users.save(user);
+        if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
+            users.clearLoginFailures(user.getId());
+        }
         return issueTokens(user);
     }
 
-    @Transactional
     public TokenResponse refresh(String rawToken) {
         RefreshToken stored = refreshTokens.findByTokenHash(sha256(rawToken))
                 .orElseThrow(InvalidRefreshToken::new);
-        if (!stored.isUsable(Instant.now())) {
+
+        Instant now = Instant.now();
+        if (stored.isRevoked()) {
+            refreshTokens.revokeAllForUser(stored.getUserId());
             throw new InvalidRefreshToken();
         }
-        stored.revoke();
-        refreshTokens.save(stored);
+        if (stored.isExpired(now)) {
+            throw new InvalidRefreshToken();
+        }
 
         AppUser user = users.findById(stored.getUserId()).orElseThrow(InvalidRefreshToken::new);
+        if (user.isLocked(now)) {
+            throw new AccountLocked(user.getLockedUntil());
+        }
+
+        stored.revoke();
+        refreshTokens.save(stored);
         return issueTokens(user);
     }
 
@@ -101,9 +121,9 @@ public class AuthService {
     private String sha256(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("SHA-256 unavailable", e);
         }
     }
 }

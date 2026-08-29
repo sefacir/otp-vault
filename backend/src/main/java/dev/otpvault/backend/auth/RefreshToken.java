@@ -3,12 +3,13 @@ package dev.otpvault.backend.auth;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "refresh_token")
+@Table(name = "refresh_token", indexes = @Index(name = "idx_refresh_token_user", columnList = "userId"))
 public class RefreshToken {
 
     @Id
@@ -41,11 +42,28 @@ public class RefreshToken {
         return userId;
     }
 
+    public boolean isRevoked() {
+        return revoked;
+    }
+
+    public boolean isExpired(Instant now) {
+        return !expiresAt.isAfter(now);
+    }
+
     public void revoke() {
         this.revoked = true;
     }
 
-    public boolean isUsable(Instant now) {
-        return !revoked && expiresAt.isAfter(now);
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        return other instanceof RefreshToken token && id != null && id.equals(token.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return RefreshToken.class.hashCode();
     }
 }

@@ -31,19 +31,22 @@ class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, String> register(@Valid @RequestBody RegisterRequest body, HttpServletRequest request) {
-        enforceLimit("register", request);
+        enforceLimit("register", request, body.email());
         authService.register(body.email(), body.password());
         return Map.of("status", "registered");
     }
 
     @PostMapping("/login")
     TokenResponse login(@Valid @RequestBody LoginRequest body, HttpServletRequest request) {
-        enforceLimit("login", request);
+        enforceLimit("login", request, body.email());
         return authService.login(body.email(), body.password());
     }
 
     @PostMapping("/refresh")
-    TokenResponse refresh(@Valid @RequestBody RefreshRequest body) {
+    TokenResponse refresh(@Valid @RequestBody RefreshRequest body, HttpServletRequest request) {
+        if (!rateLimiter.tryAcquire("refresh:ip:" + request.getRemoteAddr())) {
+            throw new RateLimited();
+        }
         return authService.refresh(body.refreshToken());
     }
 
@@ -52,8 +55,10 @@ class AuthController {
         return Map.of("userId", userId);
     }
 
-    private void enforceLimit(String action, HttpServletRequest request) {
-        if (!rateLimiter.tryAcquire(action + ":" + request.getRemoteAddr())) {
+    private void enforceLimit(String action, HttpServletRequest request, String identifier) {
+        boolean ipAllowed = rateLimiter.tryAcquire(action + ":ip:" + request.getRemoteAddr());
+        boolean identifierAllowed = rateLimiter.tryAcquire(action + ":id:" + identifier.trim().toLowerCase());
+        if (!ipAllowed || !identifierAllowed) {
             throw new RateLimited();
         }
     }
