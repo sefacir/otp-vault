@@ -2,6 +2,14 @@
 
 Short log of choices and why, newest first.
 
+## 2026-08-29 — Backend persistence
+
+- PostgreSQL 17 via `backend/docker-compose.yml` for local dev; CI runs a matching
+  `postgres:17-alpine` service container.
+- Spring Data JPA with `ddl-auto=update` for now. Switch to Flyway migrations before M6.
+- Datasource creds are local-dev throwaway (`otpvault`/`otpvault`), overridable via
+  `OTPVAULT_DB_*` env vars. No real secret in the repo.
+
 ## 2026-08-28 — Stack
 
 - iOS native (Swift + SwiftUI), not Flutter or React Native. AppSec primitives (Keychain,

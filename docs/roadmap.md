@@ -43,7 +43,7 @@ Keychain, and the app is gated behind Face ID / passcode.
 Done when: signup and login work, issue JWTs, rate limiting and account lockout are in
 place, data is in PostgreSQL.
 
-- [ ] PostgreSQL via docker-compose for local dev
+- [x] PostgreSQL via docker-compose for local dev (Spring Data JPA wired, CI has a pg service)
 - [ ] User entity, signup with password hashing (Argon2id)
 - [ ] Login, short-lived access JWT + refresh token
 - [ ] Rate limiting on auth endpoints
