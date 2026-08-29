@@ -25,7 +25,7 @@ with a countdown ring.
 - [x] RFC 6238 TOTP implementation (HMAC-SHA1/256/512, configurable period + digits)
 - [x] Unit tests against RFC 6238 test vectors
 - [ ] Manual "add account" form (issuer, label, secret)
-- [ ] Account list with live code + countdown ring
+- [x] Account list with live code + countdown ring
 
 ## M2 — QR entry + local encrypted storage
 
