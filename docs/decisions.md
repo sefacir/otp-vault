@@ -35,6 +35,18 @@ Short log of choices and why, newest first.
 - Wrong master password surfaces as `CryptoError.decryptionFailed` (GCM tag mismatch),
   never a partial/garbage decrypt.
 
+## 2026-08-29 — Vault storage endpoints (M4b)
+
+- One `vault` row per user (`userId` is the PK). Columns: `envelope` (text, opaque —
+  the server never parses it), `version` (int), `updatedAt`.
+- `GET /vault` -> 200 envelope or 404. `PUT /vault` upserts. `DELETE /vault` -> 204.
+- Lost-update protection: `PUT` carries `expectedVersion`. First write must omit it (or
+  send 0); an update must match the current version. The update runs as a single
+  conditional `UPDATE ... WHERE version = :expected` (rows-affected = 0 -> 409), so two
+  concurrent writers cannot both succeed. Concurrent first-time creates collide on the
+  PK and the loser gets 409.
+- All `/vault` routes require a Bearer access token (falls under `anyRequest().authenticated()`).
+
 ## 2026-08-29 — Backend auth hardening (post-review)
 
 - Login timing: on unknown email we still run one `passwordEncoder.matches` against a

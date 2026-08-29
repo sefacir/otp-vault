@@ -33,7 +33,7 @@ public class RateLimiter {
         windows.entrySet().removeIf(entry -> now.isAfter(entry.getValue().resetAt()));
     }
 
-    void reset() {
+    public void reset() {
         windows.clear();
     }
 }

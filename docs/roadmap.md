@@ -56,7 +56,7 @@ backend.
 
 - [x] Derive vault key from master password (PBKDF2-HMAC-SHA256, 600k iters), never sent to server
 - [x] Encrypt vault with AES-256-GCM (VaultCrypto + BackupEnvelope, 8 tests)
-- [ ] `PUT /vault` / `GET /vault`: one ciphertext blob per user, with version
+- [x] `GET` / `PUT` / `DELETE /vault`: one opaque envelope per user, optimistic version (11 tests)
 - [ ] iOS backup flow (needs iOS-side backend auth: register/login + token storage)
 
 ## M5 — Restore flow
