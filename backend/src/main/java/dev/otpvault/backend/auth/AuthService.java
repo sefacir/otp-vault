@@ -45,7 +45,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.denylist = denylist;
-        this.timingHash = passwordEncoder.encode("timing-equalizer-not-a-real-password");
+        this.timingHash = passwordEncoder.encode(randomToken());
     }
 
     @Transactional

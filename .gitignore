@@ -26,3 +26,4 @@ DerivedData/
 .env
 *.local
 secrets.properties
+application-local.properties

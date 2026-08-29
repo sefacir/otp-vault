@@ -23,7 +23,14 @@ Full read-through of every backend and iOS source file plus runtime probing. Fix
 - `OTPVAULT_JWT_SECRET` is required with no fallback. `JwtService` refuses a blank or
   sub-32-byte secret at startup in every profile, so the service cannot boot on a known
   weak key. Tests carry their own secret in `src/test/resources/application.properties`;
-  CI sets one in the workflow env; local dev must export it.
+  CI sets one in the workflow env. Local dev copies `application-local.properties.example`
+  to `application-local.properties` (git-ignored) — `application.properties` pulls it in
+  via `spring.config.import=optional:classpath:...`, so IntelliJ "Run" works with no env
+  var. An `OTPVAULT_JWT_SECRET` env var still overrides it.
+- The `login()` timing-equaliser hash is now built from `randomToken()` instead of a
+  string literal (was a SonarQube S6437 hard-coded-credential false positive; it is a
+  throwaway value, never a credential). Behaviour is unchanged — a fresh Argon2 hash the
+  supplied password cannot match.
 - Access-token revocation: `POST /auth/logout` (authenticated) adds the caller's `jti`
   to an in-memory `TokenDenylist` until the token's own expiry and revokes the user's
   refresh-token family. `JwtAuthenticationFilter` rejects a denylisted `jti`. Same
