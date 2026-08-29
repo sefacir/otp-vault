@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
@@ -126,6 +129,35 @@ class AuthFlowTest {
         String rotated = field(refreshRequest(original), "refreshToken");
         assertEquals(401, status(refreshRequest(original)));
         assertEquals(401, status(refreshRequest(rotated)));
+    }
+
+    @Test
+    void successfulLoginResetsFailureCount() throws Exception {
+        status(registerRequest("reset@example.com", "password123"));
+        for (int i = 0; i < 3; i++) {
+            assertEquals(401, status(loginRequest("reset@example.com", "wrongpass")));
+        }
+        assertEquals(200, status(loginRequest("reset@example.com", "password123")));
+        for (int i = 0; i < 4; i++) {
+            assertEquals(401, status(loginRequest("reset@example.com", "wrongpass")));
+        }
+    }
+
+    @Test
+    void purgeQueryRemovesExpiredAndRevokedTokens() {
+        UUID user = UUID.randomUUID();
+        refreshTokens.save(new RefreshToken(user, "hash-expired", Instant.now().minus(1, ChronoUnit.DAYS)));
+        RefreshToken revoked = new RefreshToken(user, "hash-revoked", Instant.now().plus(1, ChronoUnit.DAYS));
+        revoked.revoke();
+        refreshTokens.save(revoked);
+        RefreshToken live = refreshTokens.save(
+                new RefreshToken(user, "hash-live", Instant.now().plus(1, ChronoUnit.DAYS)));
+
+        int removed = refreshTokens.deleteExpiredOrRevoked(Instant.now());
+
+        assertEquals(2, removed);
+        assertEquals(1, refreshTokens.count());
+        assertEquals(live.getUserId(), refreshTokens.findAll().get(0).getUserId());
     }
 
     @Test
