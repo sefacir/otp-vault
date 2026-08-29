@@ -5,6 +5,7 @@ struct AccountsView: View {
     @State private var store = AccountStore()
     @State private var showingAdd = false
     @State private var showingScanner = false
+    @State private var showingBackup = false
     @State private var editing: Account?
 
     var body: some View {
@@ -25,6 +26,11 @@ struct AccountsView: View {
             }
             .navigationTitle("Accounts")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Backup", systemImage: "icloud.and.arrow.up") {
+                        showingBackup = true
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button("Scan QR Code", systemImage: "qrcode.viewfinder") {
@@ -43,6 +49,9 @@ struct AccountsView: View {
             }
             .sheet(isPresented: $showingScanner) {
                 ScanSheet { store.add(Account(from: $0)) }
+            }
+            .sheet(isPresented: $showingBackup) {
+                BackupView(accounts: store.accounts)
             }
             .sheet(item: $editing) { account in
                 EditAccountView(account: account) { store.update($0) }

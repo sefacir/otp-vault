@@ -33,7 +33,9 @@ Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
 | V5 Validation | Request body validation on all endpoints | ~ | auth DTOs validated; revisit for /vault in M4 |
 | V7 Logging | Auth events logged, no secrets in logs | - | M6 |
 | V7 Data retention | Expired / revoked refresh tokens purged | x | hourly @Scheduled cleanup |
-| V8 Data | Vault stored as ciphertext only | - | M4 |
+| V8 Data | Vault stored as ciphertext only | x | server stores opaque envelope; verified via live test |
+| CRYPTO | Vault key derivation (PBKDF2-HMAC-SHA256, 600k) | x | client-side; key never sent to server |
+| CRYPTO | Vault encryption AES-256-GCM, fresh salt + nonce per seal | x | VaultCrypto, 8 tests |
 | V13 API | Actuator locked down except /actuator/health | x | /actuator/** denyAll |
 | V14 Config | Secrets from env, not committed | ~ | dev JWT secret has a default; startup fails if used with prod profile |
 | V14 Config | Client IP behind proxy | - | rate limiter trusts remoteAddr; needs forward-headers config when proxied |

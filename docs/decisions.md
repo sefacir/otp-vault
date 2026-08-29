@@ -35,6 +35,20 @@ Short log of choices and why, newest first.
 - Wrong master password surfaces as `CryptoError.decryptionFailed` (GCM tag mismatch),
   never a partial/garbage decrypt.
 
+## 2026-08-29 — iOS backup flow (M4c)
+
+- `BackendClient` (URLSession, async) in `OtpVaultCore`, behind a `BackendAPI` protocol so
+  `VaultSync` is testable with a fake. Status codes map to a small `ClientError` enum.
+- `VaultSync.push` / `pull` orchestrate encode -> seal -> PUT and GET -> open -> decode.
+  `pushWithRetry` handles 401 (refresh once) and 409 (re-read version, local wins).
+- App: `Session` stores the access + refresh tokens in the Keychain and the last backup
+  version in UserDefaults. `BackupView` does sign in / register and "Back up now".
+- Dev backend URL is `http://localhost:8080`; the app has an ATS `NSAllowsLocalNetworking`
+  exception via a real `Info.plist` (kept outside the file-system-synchronized group to
+  avoid a duplicate-Info.plist build error).
+- Verified end to end in the simulator: register -> sign in -> back up (v1) -> back up
+  again (v2); the server row holds only the opaque `{kdf, cipher, blobBase64}` envelope.
+
 ## 2026-08-29 — Vault storage endpoints (M4b)
 
 - One `vault` row per user (`userId` is the PK). Columns: `envelope` (text, opaque —
