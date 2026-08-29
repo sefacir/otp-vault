@@ -1,60 +1,56 @@
 import Foundation
 import Observation
+import OtpVaultCore
 
 @Observable
 final class AccountStore {
     private static let service = "dev.otpvault"
-    private static let account = "accounts.v1"
+    private static let key = "accounts.v1"
+
+    private let store = CodableStore<[Account]>(
+        store: KeychainStore(service: service),
+        key: key
+    )
 
     private(set) var accounts: [Account] = []
 
     init() {
-        load()
+        switch store.load() {
+        case .missing:
+            accounts = Account.samples
+            store.save(accounts)
+        case .corrupt:
+            accounts = []
+        case .value(let decoded):
+            accounts = decoded
+        }
     }
 
     func add(_ account: Account) {
         accounts.append(account)
-        persist()
+        store.save(accounts)
     }
 
     func replaceAll(_ newAccounts: [Account]) {
         accounts = newAccounts
-        persist()
+        store.save(accounts)
     }
 
     func delete(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
             accounts.remove(at: index)
         }
-        persist()
+        store.save(accounts)
     }
 
     func delete(_ account: Account) {
         accounts.removeAll { $0.id == account.id }
-        persist()
+        store.save(accounts)
     }
 
     func update(_ account: Account) {
         guard let index = accounts.firstIndex(where: { $0.id == account.id }) else { return }
         accounts[index] = account
-        persist()
-    }
-
-    private func load() {
-        guard let data = Keychain.read(service: Self.service, account: Self.account) else {
-            accounts = Account.samples
-            persist()
-            return
-        }
-        guard let decoded = try? JSONDecoder().decode([Account].self, from: data) else {
-            accounts = []
-            return
-        }
-        accounts = decoded
-    }
-
-    private func persist() {
-        guard let data = try? JSONEncoder().encode(accounts) else { return }
-        try? Keychain.write(data, service: Self.service, account: Self.account)
+        store.save(accounts)
     }
 }

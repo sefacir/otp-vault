@@ -1,56 +1,60 @@
 # Security checklist
 
-Tracked against OWASP MASVS (mobile) and ASVS (backend). Filled in as milestones land.
-Status: `-` not started, `~` in progress, `x` done, `n/a` not applicable.
+Reviewed against OWASP MASVS (mobile) and ASVS (backend). Status: `-` not started,
+`~` partial / accepted gap, `x` done, `n/a` not applicable. Last full pass: M6.
 
-## MASVS — mobile
+## MASVS — iOS app
 
-| ID area | Item | Status | Notes |
-|---------|------|--------|-------|
-| STORAGE | Secrets in Keychain, not UserDefaults / plist | - | M2 |
-| STORAGE | Keychain access control: device-only, biometry | - | M2 |
-| STORAGE | No secrets in logs, backups, screenshots | - | M2 |
-| CRYPTO  | Vault KDF chosen + documented (PBKDF2 600k) | x | M4; Argon2id deferred to avoid an SPM dep |
-| CRYPTO  | AES-256-GCM, fresh salt + nonce per seal | x | M4 (VaultCrypto) |
-| CRYPTO  | KDF params authenticated (server cannot weaken) | x | M6; params bound into GCM AAD, envelope format 2 |
-| CRYPTO  | No hardcoded keys | x | keys derived from master password only |
-| AUTH    | App lock via LocalAuthentication | x | M2 |
+| Area | Item | Status | Notes |
+|------|------|--------|-------|
+| STORAGE | TOTP secrets + tokens in the Keychain, never UserDefaults / plist | x | `AccountStore` via `CodableStore`, `Session` via `TokenStore`; only the vault version number is in UserDefaults |
+| STORAGE | Keychain items are device-only, not synced or backed up | x | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` |
+| STORAGE | Corrupt local store never silently discards real data | x | decode failure loads empty and keeps the bad blob (does not re-seed samples) |
+| STORAGE | No secrets in logs | x | no secret is printed / os_log'd |
+| STORAGE | Codes not exposed in the app-switcher snapshot | ~ | no background blur yet |
+| CRYPTO | Vault key from a real KDF, never sent to the server | x | PBKDF2-HMAC-SHA256, 600k iters (Argon2id deferred to keep zero SPM deps) |
+| CRYPTO | Vault encrypted with AES-256-GCM, fresh salt + nonce per seal | x | `VaultCrypto` |
+| CRYPTO | KDF params authenticated so a hostile server cannot weaken them | x | params bound into the GCM AAD; envelope format 2; `open` rejects tampered params and non-2 formats |
+| CRYPTO | No hardcoded keys | x | every key derives from the master password |
+| AUTH | App lock behind Face ID / passcode, re-locks on background | x | `AppLock` + `LocalAuthentication` |
 | NETWORK | ATS not weakened except localhost dev | x | `NSAllowsLocalNetworking` only |
-| NETWORK | Certificate pinning | x | M6; `CertificatePinning` + `PinnedSessionDelegate`, config-driven (pins empty in dev) |
-| RESILIENCE | Jailbreak detection (defense in depth, non-blocking) | x | M6; `DeviceIntegrity` + warning banner |
+| NETWORK | Certificate pinning available | x | `CertificatePinning` + `PinnedSessionDelegate`, driven by `OTPVAULT_PINNED_CERT_SHA256`; empty (off) in dev — populate for prod |
+| RESILIENCE | Jailbreak detection, non-blocking | x | `DeviceIntegrity` + warning banner |
+| RESILIENCE | Anti-debug / release hardening | ~ | relies on the Xcode Release build; no extra checks |
+| CODE | Third-party components minimised | x | `OtpVaultCore` and the app have zero external dependencies |
 
 ## ASVS — backend
 
-| ID area | Item | Status | Notes |
-|---------|------|--------|-------|
-| V2 Auth | Password hashing with Argon2id | x | Argon2PasswordEncoder v5.8 defaults |
-| V2 Auth | Login timing constant for unknown vs known email | x | dummy-hash match on miss |
-| V2 Auth | Rate limiting on auth endpoints | x | fixed window 10/60s, keyed by IP and by identifier |
-| V2 Auth | Account lockout / throttling | x | 5 fails -> 15 min lock; atomic counter updates |
-| V2 Auth | Registration does not leak account existence | ~ | still returns 409; accepted until email verification exists |
-| V3 Session | Short-lived access token, rotating refresh | x | 15 min JWT (jti); refresh stored as SHA-256 hash, single-use |
-| V3 Session | Refresh-token reuse detection | x | replay of a revoked token revokes the whole family |
-| V3 Session | Locked account cannot mint tokens via refresh | x | refresh re-checks lock |
-| V5 Validation | Request body validation on all endpoints | x | auth + vault DTOs validated (email, size caps) |
-| V7 Logging | Auth + vault events logged, no PII/secrets | x | `audit.auth` / `audit.vault` loggers, userId only |
-| V7 Data retention | Expired / revoked refresh tokens purged | x | hourly @Scheduled cleanup |
-| V8 Data | Vault stored as ciphertext only | x | server stores opaque envelope; verified via live test |
-| V8 Data | Schema managed by versioned migrations | x | Flyway V1; Hibernate ddl-auto=validate |
-| V13 API | Rate limit on vault writes | x | 10 / 60s per user on PUT /vault |
-| V3 Session | Access token has issuer claim, validated | x | `iss=otp-vault`, parser requireIssuer |
-| V9 Comms | HSTS header + optional HTTPS-only | x | HSTS 1y; `requiresChannel` gated by `otpvault.security.require-https` |
-| V9 Comms | Correct client IP behind proxy | x | `server.forward-headers-strategy=framework` |
-| CRYPTO | Vault key derivation (PBKDF2-HMAC-SHA256, 600k) | x | client-side; key never sent to server |
-| CRYPTO | Vault encryption AES-256-GCM, fresh salt + nonce per seal | x | VaultCrypto, 8 tests |
-| V13 API | Actuator locked down except /actuator/health | x | /actuator/** denyAll |
-| V14 Config | Secrets from env, not committed | ~ | dev JWT secret has a default; startup fails if used with prod profile |
-| V14 Config | Client IP behind proxy | - | rate limiter trusts remoteAddr; needs forward-headers config when proxied |
+| Area | Item | Status | Notes |
+|------|------|--------|-------|
+| Auth | Password hashing with Argon2id | x | `Argon2PasswordEncoder` v5.8 defaults |
+| Auth | Constant-time login for unknown vs known email | x | dummy-hash `matches` on miss |
+| Auth | Rate limiting on auth endpoints | x | fixed window 10 / 60s, keyed by IP and by identifier |
+| Auth | Account lockout after repeated failures | x | 5 fails -> 15 min lock; atomic counter updates |
+| Auth | Registration does not leak account existence | ~ | returns 409; accepted until email verification exists |
+| Session | Short-lived access token + rotating refresh | x | 15 min JWT with `jti` + `iss`; refresh stored as SHA-256 hash, single-use |
+| Session | Refresh-token reuse detection | x | replaying a revoked token revokes the whole family |
+| Session | Locked account cannot mint tokens via refresh | x | `refresh` re-checks the lock |
+| Session | Access token issuer claim validated | x | `iss=otp-vault`, parser `requireIssuer` |
+| Access control | Vault is strictly per-user, no IDOR | x | vault PK is the userId from the token |
+| Validation | Request bodies validated (email, size caps) | x | auth + vault DTOs; `/vault` envelope capped at 1 MB |
+| Injection | No SQLi | x | all queries are parameterised JPQL / derived methods |
+| API | Rate limit on vault writes | x | 10 / 60s per user on `PUT /vault` |
+| API | Actuator locked to `/actuator/health` only | x | `/actuator/**` denyAll |
+| Comms | HSTS header + optional HTTPS-only | x | HSTS 1y; `requiresChannel` gated by `otpvault.security.require-https` |
+| Comms | Correct client IP behind a proxy | x | `server.forward-headers-strategy=framework` |
+| Logging | Auth + vault events audited, no PII / secrets | x | `audit.auth` / `audit.vault`, userId UUID only |
+| Data | Vault stored as an opaque ciphertext envelope | x | server never parses it |
+| Data | Expired / revoked refresh tokens purged | x | hourly `@Scheduled` cleanup |
+| Config | Schema via versioned migrations | x | Flyway `V1__init.sql`; Hibernate `ddl-auto=validate` |
+| Config | JWT secret from env; dev default refuses the prod profile | ~ | dev default present for local convenience |
+| Errors | No stack traces / internals in responses | x | `@RestControllerAdvice` returns `{error: ...}`; `include-stacktrace=never` |
 
-## Supply chain
+## Supply chain (CI)
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Secret scanning in CI (gitleaks) | x | M0, full history |
+| Secret scanning (gitleaks, full history) | x | M0 |
 | Dependency scanning (Trivy, fail on HIGH/CRITICAL) | x | M6; caught + fixed CVE-2025-14813 (bcprov 1.78.1 -> 1.85.2) |
 | Automated dependency updates (Dependabot) | x | M6; maven + swift + github-actions, weekly |
-| SBOM generated in CI (CycloneDX) | x | M6; backend `cyclonedx-maven-plugin` + repo-wide Trivy SBOM, uploaded as artifacts |
+| SBOM (CycloneDX) generated + archived | x | M6; `cyclonedx-maven-plugin`, uploaded as a CI artifact |

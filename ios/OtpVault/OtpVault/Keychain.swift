@@ -1,5 +1,22 @@
 import Foundation
+import OtpVaultCore
 import Security
+
+struct KeychainStore: KeyValueStore {
+    let service: String
+
+    func data(forKey key: String) -> Data? {
+        Keychain.read(service: service, account: key)
+    }
+
+    func set(_ data: Data, forKey key: String) {
+        try? Keychain.write(data, service: service, account: key)
+    }
+
+    func removeValue(forKey key: String) {
+        Keychain.delete(service: service, account: key)
+    }
+}
 
 enum Keychain {
     enum KeychainError: Error {

@@ -77,9 +77,8 @@ docs are current.
 - [x] Dependency scanning (Trivy HIGH/CRITICAL) + Dependabot + CycloneDX SBOM in CI
 - [x] Backend: Flyway, HSTS + optional HTTPS-only, /vault rate limit, JWT iss, audit logging, forward-headers
 - [x] iOS: certificate pinning + configurable base URL, envelope AAD binding, master-password min 10, jailbreak banner
-- [ ] iOS app unit-test target (Session, AccountStore) + JwtServiceTest
-- [ ] MASVS review pass, findings logged
-- [ ] ASVS review pass, findings logged
+- [x] Storage logic (TokenStore, CodableStore) extracted to OtpVaultCore + tested; JwtServiceTest added
+- [x] MASVS + ASVS review pass, `docs/security-checklist.md` filled in (M6)
 
 ## Later
 
