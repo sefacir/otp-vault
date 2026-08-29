@@ -71,11 +71,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Trivy
         env:
-          TRIVY_VERSION: 0.58.1
+          TRIVY_VERSION: 0.74.0
         run: |
-          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
             | tar -xz trivy
           sudo mv trivy /usr/local/bin/
+          trivy --version
       - name: Vulnerability scan
         run: trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --no-progress .
       - name: Generate repository SBOM
