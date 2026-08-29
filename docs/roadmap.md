@@ -33,7 +33,7 @@ Done when: an `otpauth://` QR is scanned into an account, secrets sit encrypted 
 Keychain, and the app is gated behind Face ID / passcode.
 
 - [x] Parse `otpauth://totp/...` (OtpAuthURI, 11 tests)
-- [ ] Camera QR scanner feeding OtpAuthURI
+- [x] Camera QR scanner feeding OtpAuthURI (VisionKit DataScanner; graceful fallback without camera)
 - [x] Store secrets in Keychain (device-only; biometry gate lands with app lock)
 - [x] App lock screen via LocalAuthentication (biometry + passcode, re-locks on background)
 - [x] Delete account (swipe); edit still pending

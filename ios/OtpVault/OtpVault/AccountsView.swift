@@ -4,6 +4,7 @@ import OtpVaultCore
 struct AccountsView: View {
     @State private var store = AccountStore()
     @State private var showingAdd = false
+    @State private var showingScanner = false
 
     var body: some View {
         NavigationStack {
@@ -18,8 +19,13 @@ struct AccountsView: View {
             .navigationTitle("Accounts")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingAdd = true
+                    Menu {
+                        Button("Scan QR Code", systemImage: "qrcode.viewfinder") {
+                            showingScanner = true
+                        }
+                        Button("Enter Manually", systemImage: "keyboard") {
+                            showingAdd = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -27,6 +33,9 @@ struct AccountsView: View {
             }
             .sheet(isPresented: $showingAdd) {
                 AddAccountView { store.add($0) }
+            }
+            .sheet(isPresented: $showingScanner) {
+                ScanSheet { store.add(Account(from: $0)) }
             }
         }
     }

@@ -34,6 +34,17 @@ struct Account: Identifiable, Codable {
 }
 
 extension Account {
+    init(from uri: OtpAuthURI) {
+        self.init(
+            issuer: uri.issuer ?? "",
+            label: uri.account,
+            secret: uri.secret,
+            digits: uri.digits,
+            period: uri.period,
+            algorithm: uri.algorithm
+        )
+    }
+
     static let samples: [Account] = [
         Account(issuer: "GitHub", label: "sefacir", secret: Base32.decode("JBSWY3DPEHPK3PXP") ?? Data()),
         Account(issuer: "Google", label: "ecirsefa@gmail.com", secret: Base32.decode("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ") ?? Data()),
