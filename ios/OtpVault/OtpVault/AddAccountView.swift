@@ -60,7 +60,7 @@ struct AddAccountView: View {
         let account = Account(
             issuer: issuer.trimmingCharacters(in: .whitespaces),
             label: label.trimmingCharacters(in: .whitespaces),
-            totp: TOTP(secret: data)
+            secret: data
         )
         onSave(account)
         dismiss()

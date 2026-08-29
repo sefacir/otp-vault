@@ -32,10 +32,11 @@ with a countdown ring.
 Done when: an `otpauth://` QR is scanned into an account, secrets sit encrypted in the
 Keychain, and the app is gated behind Face ID / passcode.
 
-- [ ] Camera QR scanner, parse `otpauth://totp/...`
-- [ ] Store secrets in Keychain (access control: this device only, biometry)
+- [x] Parse `otpauth://totp/...` (OtpAuthURI, 11 tests)
+- [ ] Camera QR scanner feeding OtpAuthURI
+- [x] Store secrets in Keychain (device-only; biometry gate lands with app lock)
 - [ ] App lock screen via LocalAuthentication
-- [ ] Delete / edit account
+- [x] Delete account (swipe); edit still pending
 
 ## M3 — Backend authentication
 

@@ -3,7 +3,7 @@ import CryptoKit
 
 public struct TOTP {
 
-    public enum Algorithm {
+    public enum Algorithm: String, Codable, Sendable {
         case sha1
         case sha256
         case sha512

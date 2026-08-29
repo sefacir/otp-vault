@@ -2,14 +2,17 @@ import SwiftUI
 import OtpVaultCore
 
 struct AccountsView: View {
-    @State private var accounts = Account.samples
+    @State private var store = AccountStore()
     @State private var showingAdd = false
 
     var body: some View {
         NavigationStack {
             TimelineView(.periodic(from: .now, by: 1)) { context in
-                List(accounts) { account in
-                    AccountRow(account: account, now: context.date)
+                List {
+                    ForEach(store.accounts) { account in
+                        AccountRow(account: account, now: context.date)
+                    }
+                    .onDelete(perform: store.delete)
                 }
             }
             .navigationTitle("Accounts")
@@ -23,7 +26,7 @@ struct AccountsView: View {
                 }
             }
             .sheet(isPresented: $showingAdd) {
-                AddAccountView { accounts.append($0) }
+                AddAccountView { store.add($0) }
             }
         }
     }
