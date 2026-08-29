@@ -41,12 +41,13 @@ final class AccountStore {
     }
 
     private func load() {
-        guard
-            let data = Keychain.read(service: Self.service, account: Self.account),
-            let decoded = try? JSONDecoder().decode([Account].self, from: data)
-        else {
+        guard let data = Keychain.read(service: Self.service, account: Self.account) else {
             accounts = Account.samples
             persist()
+            return
+        }
+        guard let decoded = try? JSONDecoder().decode([Account].self, from: data) else {
+            accounts = []
             return
         }
         accounts = decoded

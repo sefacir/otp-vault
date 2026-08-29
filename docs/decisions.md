@@ -35,6 +35,28 @@ Short log of choices and why, newest first.
 - Wrong master password surfaces as `CryptoError.decryptionFailed` (GCM tag mismatch),
   never a partial/garbage decrypt.
 
+## 2026-08-29 — Pre-M6 full review
+
+Top-to-bottom pass over everything through M5. All three targets build clean; 57 iOS-core
++ 24 backend tests green. No credentials in backend logs; security headers (nosniff,
+frame DENY, no-store on /vault) confirmed live. No SQLi / IDOR / mass-assignment.
+
+Fixed in this pass:
+- `AccountStore.load` no longer overwrites the Keychain with sample data when the stored
+  blob fails to decode — it now loads empty and preserves the bad blob (was a silent
+  data-loss path on any schema change).
+- Excluded `UserDetailsServiceAutoConfiguration` — kills the phantom "generated security
+  password" startup log and the unused in-memory user.
+- Added a `/vault` oversized-envelope (>1 MB) -> 400 test.
+
+Deferred to M6 (hardening):
+- B2 no rate limit on `PUT /vault`; B5 JWT has no `iss`/`aud`; B6 no auth audit logging;
+  B7 no HSTS / HTTPS enforcement; B8 no dependency scanning (JJWT 0.12.6, BC 1.78.1);
+  B9 Flyway instead of `ddl-auto=update`.
+- I3 iOS `baseURL` hardcoded http + needs cert pinning; I4 master-password min length is
+  only 8; I5 envelope KDF params are server-trusted (needs signing).
+- T1 add an iOS app unit-test target (Session, AccountStore); T2 focused `JwtServiceTest`.
+
 ## 2026-08-29 — iOS restore flow (M5)
 
 - `VaultSync.pullWithRetry` mirrors `pushWithRetry`: GET vault -> decrypt -> return

@@ -152,6 +152,14 @@ class VaultFlowTest {
     }
 
     @Test
+    void oversizedEnvelopeReturns400() throws Exception {
+        String token = tokenFor("v10@example.com");
+        String oversized = "x".repeat(1_000_001);
+        assertEquals(400, statusOf(putVault(token, "{\"envelope\":\"" + oversized + "\"}")));
+        assertEquals(0, vaults.count());
+    }
+
+    @Test
     void putRequiresAuth() throws Exception {
         assertEquals(401, statusOf(put("/vault")
                 .contentType(MediaType.APPLICATION_JSON)
